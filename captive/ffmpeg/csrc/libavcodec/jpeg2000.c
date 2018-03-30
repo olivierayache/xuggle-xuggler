@@ -506,6 +506,9 @@ int ff_jpeg2000_init_component(Jpeg2000Component *comp,
         // update precincts size: 2^n value
         reslevel->log2_prec_width  = codsty->log2_prec_widths[reslevelno];
         reslevel->log2_prec_height = codsty->log2_prec_heights[reslevelno];
+        if (!reslevel->log2_prec_width || !reslevel->log2_prec_height) {
+            return AVERROR_INVALIDDATA;
+        }
 
         /* Number of bands for each resolution level */
         if (reslevelno == 0)
@@ -538,6 +541,9 @@ int ff_jpeg2000_init_component(Jpeg2000Component *comp,
 
         reslevel->band = av_mallocz_array(reslevel->nbands, sizeof(*reslevel->band));
         if (!reslevel->band)
+            return AVERROR(ENOMEM);
+
+        if (reslevel->num_precincts_x * (uint64_t)reslevel->num_precincts_y * reslevel->nbands > avctx->max_pixels / sizeof(*reslevel->band->prec))
             return AVERROR(ENOMEM);
 
         for (bandno = 0; bandno < reslevel->nbands; bandno++, gbandno++) {
