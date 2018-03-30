@@ -2622,6 +2622,7 @@ static int http_start_receive_data(HTTPContext *c)
 {
     int fd;
     int ret;
+    int64_t ret64;
 
     if (c->stream->feed_opened) {
         http_log("Stream feed '%s' was not opened\n",
@@ -2657,13 +2658,13 @@ static int http_start_receive_data(HTTPContext *c)
             return ret;
         }
     } else {
-        ret = ffm_read_write_index(fd);
-        if (ret < 0) {
+        ret64 = ffm_read_write_index(fd);
+        if (ret64 < 0) {
             http_log("Error reading write index from feed file '%s': %s\n",
                      c->stream->feed_filename, strerror(errno));
-            return ret;
+            return ret64;
         }
-        c->stream->feed_write_index = ret;
+        c->stream->feed_write_index = ret64;
     }
 
     c->stream->feed_write_index = FFMAX(ffm_read_write_index(fd),
@@ -2701,10 +2702,8 @@ static int http_receive_data(HTTPContext *c)
         } else if (c->buffer_ptr - c->buffer >= 2 &&
                    !memcmp(c->buffer_ptr - 1, "\r\n", 2)) {
             c->chunk_size = strtol(c->buffer, 0, 16);
-            if (c->chunk_size <= 0) { // end of stream or invalid chunk size
-                c->chunk_size = 0;
+            if (c->chunk_size == 0) // end of stream
                 goto fail;
-            }
             c->buffer_ptr = c->buffer;
             break;
         } else if (++loop_run > 10)
@@ -2726,7 +2725,6 @@ static int http_receive_data(HTTPContext *c)
             /* end of connection : close it */
             goto fail;
         else {
-            av_assert0(len <= c->chunk_size);
             c->chunk_size -= len;
             c->buffer_ptr += len;
             c->data_count += len;
@@ -2998,6 +2996,8 @@ static int prepare_sdp_description(FFServerStream *stream, uint8_t **pbuffer,
     for(i = 0; i < stream->nb_streams; i++) {
         avc->streams[i] = &avs[i];
         avc->streams[i]->codec = stream->streams[i]->codec;
+        avcodec_parameters_from_context(stream->streams[i]->codecpar, stream->streams[i]->codec);
+        avc->streams[i]->codecpar = stream->streams[i]->codecpar;
     }
     *pbuffer = av_mallocz(2048);
     if (!*pbuffer)
@@ -3538,6 +3538,8 @@ static AVStream *add_av_stream1(FFServerStream *stream,
 
     fst->priv_data = av_mallocz(sizeof(FeedData));
     fst->internal = av_mallocz(sizeof(*fst->internal));
+    fst->internal->avctx = avcodec_alloc_context3(NULL);
+    fst->codecpar = avcodec_parameters_alloc();
     fst->index = stream->nb_streams;
     avpriv_set_pts_info(fst, 33, 1, 90000);
     fst->sample_aspect_ratio = codec->sample_aspect_ratio;
@@ -3978,7 +3980,6 @@ int main(int argc, char **argv)
     int cfg_parsed;
     int ret = EXIT_FAILURE;
 
-    init_dynload();
 
     config.filename = av_strdup("/etc/ffserver.conf");
 

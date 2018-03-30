@@ -466,7 +466,7 @@ static int comp_interp_index(G723_1_Context *p, int pitch_lag,
 }
 
 /**
- * Peform residual interpolation based on frame classification.
+ * Perform residual interpolation based on frame classification.
  *
  * @param buf   decoded excitation vector
  * @param out   output vector
@@ -487,7 +487,7 @@ static void residual_interp(int16_t *buf, int16_t *out, int lag,
                           (FRAME_LEN - lag) * sizeof(*out));
     } else {  /* Unvoiced */
         for (i = 0; i < FRAME_LEN; i++) {
-            *rseed = (int16_t)(*rseed * 521 + 259);
+            *rseed = *rseed * 521 + 259;
             out[i] = gain * *rseed >> 15;
         }
         memset(buf, 0, (FRAME_LEN + PITCH_MAX) * sizeof(*buf));
@@ -516,7 +516,7 @@ static void residual_interp(int16_t *buf, int16_t *out, int lag,
                       (iir_coef)[n - 1] * ((dest)[m - n] >> in_shift);\
         }\
 \
-        (dest)[m] = av_clipl_int32(((src)[m] * 65536) + (filter * 8) +\
+        (dest)[m] = av_clipl_int32(((src)[m] << 16) + (filter << 3) +\
                                    (1 << 15)) >> res_shift;\
     }\
 }
@@ -663,7 +663,7 @@ static int estimate_sid_gain(G723_1_Context *p)
         t = p->sid_gain << shift;
     else
         t = p->sid_gain >> -shift;
-    x = av_clipl_int32(t * (int64_t)cng_filt[0] >> 16);
+    x = t * cng_filt[0] >> 16;
 
     if (x >= cng_bseg[2])
         return 0x3F;
@@ -694,13 +694,13 @@ static int estimate_sid_gain(G723_1_Context *p)
     if (y <= 0) {
         t = seg * 32 + (val + 1 << seg2);
         t = t * t - x;
-        val = (seg2 - 1) * 16 + val;
+        val = (seg2 - 1 << 4) + val;
         if (t >= y)
             val++;
     } else {
         t = seg * 32 + (val - 1 << seg2);
         t = t * t - x;
-        val = (seg2 - 1) * 16 + val;
+        val = (seg2 - 1 << 4) + val;
         if (t >= y)
             val--;
     }
@@ -732,7 +732,7 @@ static void generate_noise(G723_1_Context *p)
         off[i * 2 + 1] = ((t >> 1) & 1) + SUBFRAME_LEN;
         t >>= 2;
         for (j = 0; j < 11; j++) {
-            signs[i * 11 + j] = ((t & 1) * 2 - 1)  * (1 << 14);
+            signs[i * 11 + j] = (t & 1) * 2 - 1 << 14;
             t >>= 1;
         }
     }
@@ -776,7 +776,7 @@ static void generate_noise(G723_1_Context *p)
         sum = 0;
         if (shift < 0) {
            for (j = 0; j < SUBFRAME_LEN * 2; j++) {
-               t      = vector_ptr[j] * (1 << -shift);
+               t      = vector_ptr[j] << -shift;
                sum   += t * t;
                tmp[j] = t;
            }
@@ -814,7 +814,7 @@ static void generate_noise(G723_1_Context *p)
         if (shift < 0)
            x >>= -shift;
         else
-           x *= 1 << shift;
+           x <<= shift;
         x = av_clip(x, -10000, 10000);
 
         for (j = 0; j < 11; j++) {
@@ -903,7 +903,7 @@ static int g723_1_decode_frame(AVCodecContext *avctx, void *data,
                                              &p->subframe[i], p->cur_rate);
                 /* Get the total excitation */
                 for (j = 0; j < SUBFRAME_LEN; j++) {
-                    int v = av_clip_int16(vector_ptr[j] * 2);
+                    int v = av_clip_int16(vector_ptr[j] << 1);
                     vector_ptr[j] = av_clip_int16(v + acb_vector[j]);
                 }
                 vector_ptr += SUBFRAME_LEN;
@@ -914,7 +914,7 @@ static int g723_1_decode_frame(AVCodecContext *avctx, void *data,
             p->interp_index = comp_interp_index(p, p->pitch_lag[1],
                                                 &p->sid_gain, &p->cur_gain);
 
-            /* Peform pitch postfiltering */
+            /* Perform pitch postfiltering */
             if (p->postfilter) {
                 i = PITCH_MAX;
                 for (j = 0; j < SUBFRAMES; i += SUBFRAME_LEN, j++)

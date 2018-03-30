@@ -28,7 +28,6 @@
 #include "mpegvideo.h"
 #include "msmpeg4.h"
 #include "libavutil/imgutils.h"
-#include "libavutil/x86/asm.h"
 #include "h263.h"
 #include "mpeg4video.h"
 #include "msmpeg4data.h"
@@ -70,7 +69,7 @@ static VLC v2_mb_type_vlc;
 static VLC v2_mv_vlc;
 VLC ff_inter_intra_vlc;
 
-/* This is identical to h263 except that its range is multiplied by 2. */
+/* This is identical to H.263 except that its range is multiplied by 2. */
 static int msmpeg4v2_decode_motion(MpegEncContext * s, int pred, int f_code)
 {
     int code, val, sign, shift;
@@ -141,7 +140,7 @@ static int msmpeg4v12_decode_mb(MpegEncContext *s, int16_t block[6][64])
         if(s->msmpeg4_version==2)
             cbp= get_vlc2(&s->gb, v2_intra_cbpc_vlc.table, V2_INTRA_CBPC_VLC_BITS, 1);
         else
-            cbp= get_vlc2(&s->gb, ff_h263_intra_MCBPC_vlc.table, INTRA_MCBPC_VLC_BITS, 2);
+            cbp= get_vlc2(&s->gb, ff_h263_intra_MCBPC_vlc.table, INTRA_MCBPC_VLC_BITS, 1);
         if(cbp<0 || cbp>3){
             av_log(s->avctx, AV_LOG_ERROR, "cbpc %d invalid at %d %d\n", cbp, s->mb_x, s->mb_y);
             return -1;
@@ -170,23 +169,12 @@ static int msmpeg4v12_decode_mb(MpegEncContext *s, int16_t block[6][64])
         s->mv[0][0][1] = my;
         *mb_type_ptr = MB_TYPE_L0 | MB_TYPE_16x16;
     } else {
-        int v;
         if(s->msmpeg4_version==2){
             s->ac_pred = get_bits1(&s->gb);
-            v = get_vlc2(&s->gb, ff_h263_cbpy_vlc.table, CBPY_VLC_BITS, 1);
-            if (v < 0) {
-                av_log(s->avctx, AV_LOG_ERROR, "cbpy vlc invalid\n");
-                return -1;
-            }
-            cbp|= v<<2;
+            cbp|= get_vlc2(&s->gb, ff_h263_cbpy_vlc.table, CBPY_VLC_BITS, 1)<<2; //FIXME check errors
         } else{
             s->ac_pred = 0;
-            v = get_vlc2(&s->gb, ff_h263_cbpy_vlc.table, CBPY_VLC_BITS, 1);
-            if (v < 0) {
-                av_log(s->avctx, AV_LOG_ERROR, "cbpy vlc invalid\n");
-                return -1;
-            }
-            cbp|= v<<2;
+            cbp|= get_vlc2(&s->gb, ff_h263_cbpy_vlc.table, CBPY_VLC_BITS, 1)<<2; //FIXME check errors
             if(s->pict_type==AV_PICTURE_TYPE_P) cbp^=0x3C;
         }
         *mb_type_ptr = MB_TYPE_INTRA;
@@ -583,7 +571,7 @@ int ff_msmpeg4_decode_ext_header(MpegEncContext * s, int buf_size)
     }
     else
     {
-        av_log(s->avctx, AV_LOG_ERROR, "I frame too long, ignoring ext header\n");
+        av_log(s->avctx, AV_LOG_ERROR, "I-frame too long, ignoring ext header\n");
     }
 
     return 0;

@@ -393,10 +393,6 @@ static int decode_header(SnowContext *s){
         av_log(s->avctx, AV_LOG_ERROR, "spatial_decomposition_count %d too large for size\n", s->spatial_decomposition_count);
         return AVERROR_INVALIDDATA;
     }
-    if (s->avctx->width > 65536-4) {
-        av_log(s->avctx, AV_LOG_ERROR, "Width %d is too large\n", s->avctx->width);
-        return AVERROR_INVALIDDATA;
-    }
 
 
     s->qlog           += (unsigned)get_symbol(&s->c, s->header_state, 1);
@@ -407,11 +403,6 @@ static int decode_header(SnowContext *s){
         av_log(s->avctx, AV_LOG_ERROR, "block_max_depth= %d is too large\n", s->block_max_depth);
         s->block_max_depth= 0;
         s->mv_scale = 0;
-        return AVERROR_INVALIDDATA;
-    }
-    if (FFABS(s->qbias) > 127) {
-        av_log(s->avctx, AV_LOG_ERROR, "qbias %d is too large\n", s->qbias);
-        s->qbias = 0;
         return AVERROR_INVALIDDATA;
     }
 

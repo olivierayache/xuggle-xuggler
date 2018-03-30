@@ -249,7 +249,7 @@ static void init_band_stepsize(AVCodecContext *avctx,
 
     band->i_stepsize = band->f_stepsize * (1 << 15);
 
-    /* FIXME: In openjepg code stespize = stepsize * 0.5. Why?
+    /* FIXME: In OpenJPEG code stepsize = stepsize * 0.5. Why?
      * If not set output of entropic decoder is not correct. */
     if (!av_codec_is_encoder(avctx->codec))
         band->f_stepsize *= 0.5;
@@ -506,9 +506,6 @@ int ff_jpeg2000_init_component(Jpeg2000Component *comp,
         // update precincts size: 2^n value
         reslevel->log2_prec_width  = codsty->log2_prec_widths[reslevelno];
         reslevel->log2_prec_height = codsty->log2_prec_heights[reslevelno];
-        if (!reslevel->log2_prec_width || !reslevel->log2_prec_height) {
-            return AVERROR_INVALIDDATA;
-        }
 
         /* Number of bands for each resolution level */
         if (reslevelno == 0)

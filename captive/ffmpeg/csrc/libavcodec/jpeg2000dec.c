@@ -260,7 +260,6 @@ static int get_siz(Jpeg2000DecoderContext *s)
     uint32_t log2_chroma_wh = 0;
     const enum AVPixelFormat *possible_fmts = NULL;
     int possible_fmts_nb = 0;
-    int ret;
 
     if (bytestream2_get_bytes_left(&s->g) < 36) {
         av_log(s->avctx, AV_LOG_ERROR, "Insufficient space for SIZ\n");
@@ -297,16 +296,6 @@ static int get_siz(Jpeg2000DecoderContext *s)
         avpriv_request_sample(s->avctx, "Support for %d components",
                               ncomponents);
         return AVERROR_PATCHWELCOME;
-    }
-
-    if (s->tile_offset_x < 0 || s->tile_offset_y < 0 ||
-        s->image_offset_x < s->tile_offset_x ||
-        s->image_offset_y < s->tile_offset_y ||
-        s->tile_width  + (int64_t)s->tile_offset_x <= s->image_offset_x ||
-        s->tile_height + (int64_t)s->tile_offset_y <= s->image_offset_y
-    ) {
-        av_log(s->avctx, AV_LOG_ERROR, "Tile offsets are invalid\n");
-        return AVERROR_INVALIDDATA;
     }
 
     s->ncomponents = ncomponents;
@@ -360,13 +349,10 @@ static int get_siz(Jpeg2000DecoderContext *s)
     }
 
     /* compute image size with reduction factor */
-    ret = ff_set_dimensions(s->avctx,
-            ff_jpeg2000_ceildivpow2(s->width  - s->image_offset_x,
-                                               s->reduction_factor),
-            ff_jpeg2000_ceildivpow2(s->height - s->image_offset_y,
-                                               s->reduction_factor));
-    if (ret < 0)
-        return ret;
+    s->avctx->width  = ff_jpeg2000_ceildivpow2(s->width  - s->image_offset_x,
+                                               s->reduction_factor);
+    s->avctx->height = ff_jpeg2000_ceildivpow2(s->height - s->image_offset_y,
+                                               s->reduction_factor);
 
     if (s->avctx->profile == FF_PROFILE_JPEG2000_DCINEMA_2K ||
         s->avctx->profile == FF_PROFILE_JPEG2000_DCINEMA_4K) {
@@ -751,9 +737,9 @@ static int get_sot(Jpeg2000DecoderContext *s, int n)
     bytestream2_get_byteu(&s->g);               // TNsot
 
     if (!Psot)
-        Psot = bytestream2_get_bytes_left(&s->g) + n + 2;
+        Psot = bytestream2_get_bytes_left(&s->g) - 2 + n + 2;
 
-    if (Psot > bytestream2_get_bytes_left(&s->g) + n + 2) {
+    if (Psot > bytestream2_get_bytes_left(&s->g) - 2 + n + 2) {
         av_log(s->avctx, AV_LOG_ERROR, "Psot %"PRIu32" too big\n", Psot);
         return AVERROR_INVALIDDATA;
     }
@@ -960,9 +946,9 @@ static int jpeg2000_decode_packet(Jpeg2000DecoderContext *s, Jpeg2000Tile *tile,
             if (!cblk->npasses) {
                 int v = expn[bandno] + numgbits - 1 -
                         tag_tree_decode(s, prec->zerobits + cblkno, 100);
-                if (v < 0 || v > 30) {
+                if (v < 0) {
                     av_log(s->avctx, AV_LOG_ERROR,
-                           "nonzerobits %d invalid or unsupported\n", v);
+                           "nonzerobits %d invalid\n", v);
                     return AVERROR_INVALIDDATA;
                 }
                 cblk->nonzerobits = v;
@@ -1769,9 +1755,12 @@ WRITE_FRAME(16, uint16_t)
 
 #undef WRITE_FRAME
 
-static int jpeg2000_decode_tile(Jpeg2000DecoderContext *s, Jpeg2000Tile *tile,
-                                AVFrame *picture)
+static int jpeg2000_decode_tile(AVCodecContext *avctx, void *td,
+                                int jobnr, int threadnr)
 {
+    Jpeg2000DecoderContext *s = avctx->priv_data;
+    AVFrame *picture = td;
+    Jpeg2000Tile *tile = s->tile + jobnr;
     int x;
 
     tile_codeblocks(s, tile);
@@ -2081,7 +2070,7 @@ static int jpeg2000_decode_frame(AVCodecContext *avctx, void *data,
     Jpeg2000DecoderContext *s = avctx->priv_data;
     ThreadFrame frame = { .f = data };
     AVFrame *picture = data;
-    int tileno, ret;
+    int ret;
 
     s->avctx     = avctx;
     bytestream2_init(&s->g, avpkt->data, avpkt->size);
@@ -2128,9 +2117,7 @@ static int jpeg2000_decode_frame(AVCodecContext *avctx, void *data,
     if (ret = jpeg2000_read_bitstream_packets(s))
         goto end;
 
-    for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++)
-        if (ret = jpeg2000_decode_tile(s, s->tile + tileno, picture))
-            goto end;
+    avctx->execute2(avctx, jpeg2000_decode_tile, picture, NULL, s->numXtiles * s->numYtiles);
 
     jpeg2000_dec_cleanup(s);
 
@@ -2173,7 +2160,7 @@ AVCodec ff_jpeg2000_decoder = {
     .long_name        = NULL_IF_CONFIG_SMALL("JPEG 2000"),
     .type             = AVMEDIA_TYPE_VIDEO,
     .id               = AV_CODEC_ID_JPEG2000,
-    .capabilities     = AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_DR1,
+    .capabilities     = AV_CODEC_CAP_SLICE_THREADS | AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_DR1,
     .priv_data_size   = sizeof(Jpeg2000DecoderContext),
     .init_static_data = jpeg2000_init_static_data,
     .init             = jpeg2000_decode_init,

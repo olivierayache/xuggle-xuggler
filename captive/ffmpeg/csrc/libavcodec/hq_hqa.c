@@ -67,11 +67,11 @@ static int hq_decode_block(HQContext *c, GetBitContext *gb, int16_t block[64],
     memset(block, 0, 64 * sizeof(*block));
 
     if (!is_hqa) {
-        block[0] = get_sbits(gb, 9) * 64;
+        block[0] = get_sbits(gb, 9) << 6;
         q = ff_hq_quants[qsel][is_chroma][get_bits(gb, 2)];
     } else {
         q = ff_hq_quants[qsel][is_chroma][get_bits(gb, 2)];
-        block[0] = get_sbits(gb, 9) * 64;
+        block[0] = get_sbits(gb, 9) << 6;
     }
 
     for (;;) {
@@ -82,7 +82,7 @@ static int hq_decode_block(HQContext *c, GetBitContext *gb, int16_t block[64],
         pos += ff_hq_ac_skips[val];
         if (pos >= 64)
             break;
-        block[ff_zigzag_direct[pos]] = (int)(ff_hq_ac_syms[val] * (unsigned)q[pos]) >> 12;
+        block[ff_zigzag_direct[pos]] = (ff_hq_ac_syms[val] * q[pos]) >> 12;
         pos++;
     }
 
@@ -154,7 +154,7 @@ static int hq_decode_frame(HQContext *ctx, AVFrame *pic,
             slice_off[slice] >= slice_off[slice + 1] ||
             slice_off[slice + 1] > data_size) {
             av_log(ctx->avctx, AV_LOG_ERROR,
-                   "Invalid slice size %zu.\n", data_size);
+                   "Invalid slice size %"SIZE_SPECIFIER".\n", data_size);
             break;
         }
         init_get_bits(&gb, src + slice_off[slice],
@@ -277,7 +277,7 @@ static int hqa_decode_frame(HQContext *ctx, AVFrame *pic, size_t data_size)
             slice_off[slice] >= slice_off[slice + 1] ||
             slice_off[slice + 1] > data_size) {
             av_log(ctx->avctx, AV_LOG_ERROR,
-                   "Invalid slice size %zu.\n", data_size);
+                   "Invalid slice size %"SIZE_SPECIFIER".\n", data_size);
             break;
         }
         init_get_bits(&gb, src + slice_off[slice],

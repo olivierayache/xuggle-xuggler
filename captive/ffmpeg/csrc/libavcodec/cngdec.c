@@ -22,7 +22,7 @@
 #include <math.h>
 
 #include "libavutil/common.h"
-#include "libavutil/internal.h"
+#include "libavutil/ffmath.h"
 #include "avcodec.h"
 #include "celp_filters.h"
 #include "internal.h"
@@ -147,7 +147,7 @@ static int cng_decode_frame(AVCodecContext *avctx, void *data,
         return ret;
     buf_out = (int16_t *)frame->data[0];
     for (i = 0; i < avctx->frame_size; i++)
-        buf_out[i] = av_clip_int16(p->filter_out[i + p->order]);
+        buf_out[i] = p->filter_out[i + p->order];
     memcpy(p->filter_out, p->filter_out + avctx->frame_size,
            p->order * sizeof(*p->filter_out));
 

@@ -48,8 +48,8 @@ static void gmc1_motion(MpegEncContext *s,
     motion_y   = s->sprite_offset[0][1];
     src_x      = s->mb_x * 16 + (motion_x >> (s->sprite_warping_accuracy + 1));
     src_y      = s->mb_y * 16 + (motion_y >> (s->sprite_warping_accuracy + 1));
-    motion_x *= 1 << (3 - s->sprite_warping_accuracy);
-    motion_y *= 1 << (3 - s->sprite_warping_accuracy);
+    motion_x <<= (3 - s->sprite_warping_accuracy);
+    motion_y <<= (3 - s->sprite_warping_accuracy);
     src_x      = av_clip(src_x, -16, s->width);
     if (src_x == s->width)
         motion_x = 0;
@@ -95,8 +95,8 @@ static void gmc1_motion(MpegEncContext *s,
     motion_y   = s->sprite_offset[1][1];
     src_x      = s->mb_x * 8 + (motion_x >> (s->sprite_warping_accuracy + 1));
     src_y      = s->mb_y * 8 + (motion_y >> (s->sprite_warping_accuracy + 1));
-    motion_x  *= 1 << (3 - s->sprite_warping_accuracy);
-    motion_y  *= 1 << (3 - s->sprite_warping_accuracy);
+    motion_x <<= (3 - s->sprite_warping_accuracy);
+    motion_y <<= (3 - s->sprite_warping_accuracy);
     src_x      = av_clip(src_x, -8, s->width >> 1);
     if (src_x == s->width >> 1)
         motion_x = 0;
@@ -544,7 +544,7 @@ static inline void qpel_motion(MpegEncContext *s,
         s->vdsp.emulated_edge_mc(s->sc.edge_emu_buffer, ptr_y,
                                  s->linesize, s->linesize,
                                  17, 17 + field_based,
-                                 src_x, src_y << field_based,
+                                 src_x, src_y * (1 << field_based),
                                  s->h_edge_pos, s->v_edge_pos);
         ptr_y = s->sc.edge_emu_buffer;
         if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
@@ -553,12 +553,12 @@ static inline void qpel_motion(MpegEncContext *s,
             s->vdsp.emulated_edge_mc(ubuf, ptr_cb,
                                      s->uvlinesize, s->uvlinesize,
                                      9, 9 + field_based,
-                                     uvsrc_x, uvsrc_y << field_based,
+                                     uvsrc_x, uvsrc_y * (1 << field_based),
                                      s->h_edge_pos >> 1, s->v_edge_pos >> 1);
             s->vdsp.emulated_edge_mc(vbuf, ptr_cr,
                                      s->uvlinesize, s->uvlinesize,
                                      9, 9 + field_based,
-                                     uvsrc_x, uvsrc_y << field_based,
+                                     uvsrc_x, uvsrc_y * (1 << field_based),
                                      s->h_edge_pos >> 1, s->v_edge_pos >> 1);
             ptr_cb = ubuf;
             ptr_cr = vbuf;
@@ -591,7 +591,7 @@ static inline void qpel_motion(MpegEncContext *s,
 }
 
 /**
- * h263 chroma 4mv motion compensation.
+ * H.263 chroma 4mv motion compensation.
  */
 static void chroma_4mv_motion(MpegEncContext *s,
                               uint8_t *dest_cb, uint8_t *dest_cr,

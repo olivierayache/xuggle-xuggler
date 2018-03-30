@@ -45,8 +45,7 @@ static inline av_flatten int get_symbol_inline(RangeCoder *c, uint8_t *state,
     if (get_rac(c, state + 0))
         return 0;
     else {
-        int i, e;
-        unsigned a;
+        int i, e, a;
         e = 0;
         while (get_rac(c, state + 1 + FFMIN(e, 9))) { // 1..10
             e++;
@@ -483,7 +482,7 @@ static int read_quant_table(RangeCoder *c, int16_t *quant_table, int scale)
     memset(state, 128, sizeof(state));
 
     for (v = 0; i < 128; v++) {
-        unsigned len = get_symbol(c, state, 0) + 1U;
+        unsigned len = get_symbol(c, state, 0) + 1;
 
         if (len > 128 - i || !len)
             return AVERROR_INVALIDDATA;
@@ -769,17 +768,18 @@ static int read_header(FFV1Context *f)
                    "chroma subsampling not supported in this colorspace\n");
             return AVERROR(ENOSYS);
         }
-        if (     f->avctx->bits_per_raw_sample ==  9)
+        if (     f->avctx->bits_per_raw_sample <=  8 && !f->transparency)
+            f->avctx->pix_fmt = AV_PIX_FMT_0RGB32;
+        else if (f->avctx->bits_per_raw_sample <=  8 && f->transparency)
+            f->avctx->pix_fmt = AV_PIX_FMT_RGB32;
+        else if (f->avctx->bits_per_raw_sample ==  9 && !f->transparency)
             f->avctx->pix_fmt = AV_PIX_FMT_GBRP9;
-        else if (f->avctx->bits_per_raw_sample == 10)
+        else if (f->avctx->bits_per_raw_sample == 10 && !f->transparency)
             f->avctx->pix_fmt = AV_PIX_FMT_GBRP10;
-        else if (f->avctx->bits_per_raw_sample == 12)
+        else if (f->avctx->bits_per_raw_sample == 12 && !f->transparency)
             f->avctx->pix_fmt = AV_PIX_FMT_GBRP12;
-        else if (f->avctx->bits_per_raw_sample == 14)
+        else if (f->avctx->bits_per_raw_sample == 14 && !f->transparency)
             f->avctx->pix_fmt = AV_PIX_FMT_GBRP14;
-        else
-        if (f->transparency) f->avctx->pix_fmt = AV_PIX_FMT_RGB32;
-        else                 f->avctx->pix_fmt = AV_PIX_FMT_0RGB32;
     } else {
         av_log(f->avctx, AV_LOG_ERROR, "colorspace not supported\n");
         return AVERROR(ENOSYS);
@@ -803,7 +803,7 @@ static int read_header(FFV1Context *f)
     } else {
         const uint8_t *p = c->bytestream_end;
         for (f->slice_count = 0;
-             f->slice_count < MAX_SLICES && 3 + 5*!!f->ec < p - c->bytestream_start;
+             f->slice_count < MAX_SLICES && 3 < p - c->bytestream_start;
              f->slice_count++) {
             int trailer = 3 + 5*!!f->ec;
             int size = AV_RB24(p-trailer);
@@ -1003,7 +1003,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
             const uint8_t *src[4];
             uint8_t *dst[4];
             ff_thread_await_progress(&f->last_picture, INT_MAX, 0);
-            for (j = 0; j < desc->nb_components; j++) {
+            for (j = 0; j < 4; j++) {
                 int pixshift = desc->comp[j].depth > 8;
                 int sh = (j == 1 || j == 2) ? f->chroma_h_shift : 0;
                 int sv = (j == 1 || j == 2) ? f->chroma_v_shift : 0;
@@ -1011,12 +1011,6 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
                          (fs->slice_y >> sv) + ((fs->slice_x >> sh) << pixshift);
                 src[j] = f->last_picture.f->data[j] + f->last_picture.f->linesize[j] *
                          (fs->slice_y >> sv) + ((fs->slice_x >> sh) << pixshift);
-
-            }
-            if (desc->flags & AV_PIX_FMT_FLAG_PAL ||
-                desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
-                dst[1] = p->data[1];
-                src[1] = f->last_picture.f->data[1];
             }
             av_image_copy(dst, p->linesize, src,
                           f->last_picture.f->linesize,

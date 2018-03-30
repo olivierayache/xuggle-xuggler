@@ -53,7 +53,6 @@ int ff_lzf_uncompress(GetByteContext *gb, uint8_t **buf, int64_t *size)
                 ret = av_reallocp(buf, *size);
                 if (ret < 0)
                     return ret;
-                p = *buf + len;
             }
 
             bytestream2_get_buffer(gb, p, s);
@@ -76,7 +75,6 @@ int ff_lzf_uncompress(GetByteContext *gb, uint8_t **buf, int64_t *size)
                 ret = av_reallocp(buf, *size);
                 if (ret < 0)
                     return ret;
-                p = *buf + len;
             }
 
             av_memcpy_backptr(p, off, l);

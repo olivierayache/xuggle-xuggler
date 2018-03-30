@@ -145,7 +145,7 @@ static MacroBlock decode_macroblock(Escape124Context* s, GetBitContext* gb,
     unsigned block_index, depth;
     int value = get_bits1(gb);
     if (value) {
-        static const char transitions[3][2] = { {2, 1}, {0, 2}, {1, 0} };
+        static const int8_t transitions[3][2] = { {2, 1}, {0, 2}, {1, 0} };
         value = get_bits1(gb);
         *codebook_index = transitions[*codebook_index][value];
     }
@@ -250,10 +250,6 @@ static int escape124_decode_frame(AVCodecContext *avctx,
                 // This codebook can be cut off at places other than
                 // powers of 2, leaving some of the entries undefined.
                 cb_size = get_bits_long(&gb, 20);
-                if (!cb_size) {
-                    av_log(avctx, AV_LOG_ERROR, "Invalid codebook size 0.\n");
-                    return AVERROR_INVALIDDATA;
-                }
                 cb_depth = av_log2(cb_size - 1) + 1;
             } else {
                 cb_depth = get_bits(&gb, 4);

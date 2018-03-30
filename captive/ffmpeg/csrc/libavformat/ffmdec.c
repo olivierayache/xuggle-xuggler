@@ -284,7 +284,7 @@ static int ffm2_read_header(AVFormatContext *s)
     AVIOContext *pb = s->pb;
     AVCodecContext *codec;
     const AVCodecDescriptor *codec_desc;
-    int ret;
+    int ret, i;
     int f_main = 0, f_cprv = -1, f_stvi = -1, f_stau = -1;
     AVCodec *enc;
     char *buffer;
@@ -357,12 +357,16 @@ static int ffm2_read_header(AVFormatContext *s)
             codec->flags2 = avio_rb32(pb);
             codec->debug = avio_rb32(pb);
             if (codec->flags & AV_CODEC_FLAG_GLOBAL_HEADER) {
-                if (ff_get_extradata(codec, pb, avio_rb32(pb)) < 0)
+                int size = avio_rb32(pb);
+                codec->extradata = av_mallocz(size + AV_INPUT_BUFFER_PADDING_SIZE);
+                if (!codec->extradata)
                     return AVERROR(ENOMEM);
+                codec->extradata_size = size;
+                avio_read(pb, codec->extradata, size);
             }
             break;
         case MKBETAG('S', 'T', 'V', 'I'):
-            if (f_stvi++ || codec->codec_type != AVMEDIA_TYPE_VIDEO) {
+            if (f_stvi++) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -423,7 +427,7 @@ static int ffm2_read_header(AVFormatContext *s)
             codec->refs = avio_rb32(pb);
             break;
         case MKBETAG('S', 'T', 'A', 'U'):
-            if (f_stau++ || codec->codec_type != AVMEDIA_TYPE_AUDIO) {
+            if (f_stau++) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -449,7 +453,7 @@ static int ffm2_read_header(AVFormatContext *s)
             }
             break;
         case MKBETAG('S', '2', 'V', 'I'):
-            if (f_stvi++ || !size || codec->codec_type != AVMEDIA_TYPE_VIDEO) {
+            if (f_stvi++ || !size) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -464,7 +468,7 @@ static int ffm2_read_header(AVFormatContext *s)
                 goto fail;
             break;
         case MKBETAG('S', '2', 'A', 'U'):
-            if (f_stau++ || !size || codec->codec_type != AVMEDIA_TYPE_AUDIO) {
+            if (f_stau++ || !size) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -481,6 +485,9 @@ static int ffm2_read_header(AVFormatContext *s)
         }
         avio_seek(pb, next, SEEK_SET);
     }
+
+    for (i = 0; i < s->nb_streams; i++)
+        avcodec_parameters_from_context(s->streams[i]->codecpar, s->streams[i]->codec);
 
     /* get until end of block reached */
     while ((avio_tell(pb) % ffm->packet_size) != 0 && !pb->eof_reached)
@@ -628,9 +635,15 @@ static int ffm_read_header(AVFormatContext *s)
             goto fail;
         }
         if (codec->flags & AV_CODEC_FLAG_GLOBAL_HEADER) {
-            if (ff_get_extradata(codec, pb, avio_rb32(pb)) < 0)
+            int size = avio_rb32(pb);
+            codec->extradata = av_mallocz(size + AV_INPUT_BUFFER_PADDING_SIZE);
+            if (!codec->extradata)
                 return AVERROR(ENOMEM);
+            codec->extradata_size = size;
+            avio_read(pb, codec->extradata, size);
         }
+
+        avcodec_parameters_from_context(st->codecpar, codec);
     }
 
     /* get until end of block reached */

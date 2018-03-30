@@ -24,7 +24,6 @@
 #include "bytestream.h"
 #include "internal.h"
 #include "libavutil/colorspace.h"
-#include "libavutil/imgutils.h"
 #include "libavutil/opt.h"
 
 #define DVBSUB_PAGE_SEGMENT     0x10
@@ -811,7 +810,7 @@ static void compute_default_clut(AVSubtitleRect *rect, int w, int h)
         list_inv[     i ] = bestv;
     }
 
-    count = FFMAX(i - 1, 1);
+    count = i - 1;
     for (i--; i>=0; i--) {
         int v = i*255/count;
         AV_WN32(rect->data[1] + 4*list_inv[i], RGBA(v/2,v,v/2,v));
@@ -828,7 +827,7 @@ static int save_subtitle_set(AVCodecContext *avctx, AVSubtitle *sub, int *got_ou
     AVSubtitleRect *rect;
     DVBSubCLUT *clut;
     uint32_t *clut_table;
-    int i,j;
+    int i;
     int offset_x=0, offset_y=0;
     int ret = 0;
 
@@ -925,10 +924,13 @@ static int save_subtitle_set(AVCodecContext *avctx, AVSubtitle *sub, int *got_ou
 
 #if FF_API_AVPICTURE
 FF_DISABLE_DEPRECATION_WARNINGS
+{
+            int j;
             for (j = 0; j < 4; j++) {
                 rect->pict.data[j] = rect->data[j];
                 rect->pict.linesize[j] = rect->linesize[j];
             }
+}
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
@@ -1215,9 +1217,9 @@ static int dvbsub_parse_clut_segment(AVCodecContext *avctx,
                 return AVERROR_INVALIDDATA;
         }
 
-        if (depth & 0x80 && entry_id < 4)
+        if (depth & 0x80)
             clut->clut4[entry_id] = RGBA(r,g,b,255 - alpha);
-        else if (depth & 0x40 && entry_id < 16)
+        else if (depth & 0x40)
             clut->clut16[entry_id] = RGBA(r,g,b,255 - alpha);
         else if (depth & 0x20)
             clut->clut256[entry_id] = RGBA(r,g,b,255 - alpha);
@@ -1240,7 +1242,6 @@ static int dvbsub_parse_region_segment(AVCodecContext *avctx,
     DVBSubObject *object;
     DVBSubObjectDisplay *display;
     int fill;
-    int ret;
 
     if (buf_size < 10)
         return AVERROR_INVALIDDATA;
@@ -1268,12 +1269,6 @@ static int dvbsub_parse_region_segment(AVCodecContext *avctx,
     buf += 2;
     region->height = AV_RB16(buf);
     buf += 2;
-
-    ret = av_image_check_size(region->width, region->height, 0, avctx);
-    if (ret < 0) {
-        region->width= region->height= 0;
-        return ret;
-    }
 
     if (region->width * region->height != region->buf_size) {
         av_free(region->pbuf);

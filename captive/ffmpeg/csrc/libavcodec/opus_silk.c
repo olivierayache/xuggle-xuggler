@@ -851,7 +851,8 @@ static inline void silk_stabilize_lsf(int16_t nlsf[16], int order, const uint16_
     if (nlsf[0] < min_delta[0])
         nlsf[0] = min_delta[0];
     for (i = 1; i < order; i++)
-        nlsf[i] = FFMAX(nlsf[i], FFMIN(nlsf[i - 1] + min_delta[i], 32767));
+        if (nlsf[i] < nlsf[i - 1] + min_delta[i])
+            nlsf[i] = nlsf[i - 1] + min_delta[i];
 
     /* push backwards to increase distance */
     if (nlsf[order-1] > 32768 - min_delta[order])
@@ -1322,7 +1323,7 @@ static void silk_decode_frame(SilkContext *s, OpusRangeCoder *rc,
         if (lag_absolute) {
             /* primary lag is coded absolute */
             int highbits, lowbits;
-            const uint16_t *model[] = {
+            static const uint16_t *model[] = {
                 silk_model_pitch_lowbits_nb, silk_model_pitch_lowbits_mb,
                 silk_model_pitch_lowbits_wb
             };
@@ -1356,11 +1357,11 @@ static void silk_decode_frame(SilkContext *s, OpusRangeCoder *rc,
         ltpfilter = opus_rc_getsymbol(rc, silk_model_ltp_filter);
         for (i = 0; i < s->subframes; i++) {
             int index, j;
-            const uint16_t *filter_sel[] = {
+            static const uint16_t *filter_sel[] = {
                 silk_model_ltp_filter0_sel, silk_model_ltp_filter1_sel,
                 silk_model_ltp_filter2_sel
             };
-            const int8_t (*filter_taps[])[5] = {
+            static const int8_t (*filter_taps[])[5] = {
                 silk_ltp_filter0_taps, silk_ltp_filter1_taps, silk_ltp_filter2_taps
             };
             index = opus_rc_getsymbol(rc, filter_sel[ltpfilter]);

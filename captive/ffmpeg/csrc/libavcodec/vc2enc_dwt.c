@@ -211,25 +211,65 @@ static void vc2_subband_dwt_53(VC2TransformContext *t, dwtcoef *data,
     deinterleave(data, stride, width, height, synth);
 }
 
-av_cold int ff_vc2enc_init_transforms(VC2TransformContext *s, int p_stride,
-                                      int p_height, int slice_w, int slice_h)
+static av_always_inline void dwt_haar(VC2TransformContext *t, dwtcoef *data,
+                                      ptrdiff_t stride, int width, int height,
+                                      const int s)
+{
+    int x, y;
+    dwtcoef *synth = t->buffer, *synthl = synth, *datal = data;
+    const ptrdiff_t synth_width  = width  << 1;
+    const ptrdiff_t synth_height = height << 1;
+
+    /* Horizontal synthesis. */
+    for (y = 0; y < synth_height; y++) {
+        for (x = 0; x < synth_width; x += 2) {
+            synthl[y*synth_width + x + 1] = (datal[y*stride + x + 1] << s) -
+                                            (datal[y*stride + x] << s);
+            synthl[y*synth_width + x] = (datal[y*stride + x + 0] << s) +
+                                        ((synthl[y*synth_width + x + 1] + 1) >> 1);
+        }
+    }
+
+    /* Vertical synthesis. */
+    for (x = 0; x < synth_width; x++) {
+        for (y = 0; y < synth_height; y += 2) {
+            synthl[(y + 1)*synth_width + x] = synthl[(y + 1)*synth_width + x] -
+                                              synthl[y*synth_width + x];
+            synthl[y*synth_width + x] = synthl[y*synth_width + x] +
+                                        ((synthl[(y + 1)*synth_width + x] + 1) >> 1);
+        }
+    }
+
+    deinterleave(data, stride, width, height, synth);
+}
+
+static void vc2_subband_dwt_haar(VC2TransformContext *t, dwtcoef *data,
+                                 ptrdiff_t stride, int width, int height)
+{
+    dwt_haar(t, data, stride, width, height, 0);
+}
+
+static void vc2_subband_dwt_haar_shift(VC2TransformContext *t, dwtcoef *data,
+                                       ptrdiff_t stride, int width, int height)
+{
+    dwt_haar(t, data, stride, width, height, 1);
+}
+
+av_cold int ff_vc2enc_init_transforms(VC2TransformContext *s, int p_width, int p_height)
 {
     s->vc2_subband_dwt[VC2_TRANSFORM_9_7]    = vc2_subband_dwt_97;
     s->vc2_subband_dwt[VC2_TRANSFORM_5_3]    = vc2_subband_dwt_53;
+    s->vc2_subband_dwt[VC2_TRANSFORM_HAAR]   = vc2_subband_dwt_haar;
+    s->vc2_subband_dwt[VC2_TRANSFORM_HAAR_S] = vc2_subband_dwt_haar_shift;
 
-    /* Pad by the slice size, only matters for non-Haar wavelets */
-    s->buffer = av_calloc((p_stride + slice_w)*(p_height + slice_h), sizeof(dwtcoef));
+    s->buffer = av_malloc(2*p_width*p_height*sizeof(dwtcoef));
     if (!s->buffer)
         return 1;
-
-    s->padding = (slice_h >> 1)*p_stride + (slice_w >> 1);
-    s->buffer += s->padding;
 
     return 0;
 }
 
 av_cold void ff_vc2enc_free_transforms(VC2TransformContext *s)
 {
-    av_free(s->buffer - s->padding);
-    s->buffer = NULL;
+    av_freep(&s->buffer);
 }

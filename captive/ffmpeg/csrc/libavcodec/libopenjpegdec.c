@@ -24,6 +24,8 @@
  * JPEG 2000 decoder using libopenjpeg
  */
 
+#define  OPJ_STATIC
+
 #include "libavutil/common.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/intreadwrite.h"
@@ -124,10 +126,12 @@ typedef struct BufferReader {
 static OPJ_SIZE_T stream_read(void *out_buffer, OPJ_SIZE_T nb_bytes, void *user_data)
 {
     BufferReader *reader = user_data;
+    int remaining;
+
     if (reader->pos == reader->size) {
         return (OPJ_SIZE_T)-1;
     }
-    int remaining = reader->size - reader->pos;
+    remaining = reader->size - reader->pos;
     if (nb_bytes > remaining) {
         nb_bytes = remaining;
     }
@@ -147,10 +151,12 @@ static OPJ_OFF_T stream_skip(OPJ_OFF_T nb_bytes, void *user_data)
             nb_bytes = -reader->pos;
         }
     } else {
+        int remaining;
+
         if (reader->pos == reader->size) {
             return (OPJ_SIZE_T)-1;
         }
-        int remaining = reader->size - reader->pos;
+        remaining = reader->size - reader->pos;
         if (nb_bytes > remaining) {
             nb_bytes = remaining;
         }

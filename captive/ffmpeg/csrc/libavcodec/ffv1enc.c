@@ -32,6 +32,7 @@
 #include "libavutil/imgutils.h"
 #include "libavutil/pixdesc.h"
 #include "libavutil/timer.h"
+
 #include "avcodec.h"
 #include "internal.h"
 #include "put_bits.h"
@@ -780,12 +781,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
         s->colorspace = 1;
         s->transparency = 1;
         s->chroma_planes = 1;
-        s->bits_per_raw_sample = 8;
+        if (!avctx->bits_per_raw_sample)
+            s->bits_per_raw_sample = 8;
         break;
     case AV_PIX_FMT_0RGB32:
         s->colorspace = 1;
         s->chroma_planes = 1;
-        s->bits_per_raw_sample = 8;
+        if (!avctx->bits_per_raw_sample)
+            s->bits_per_raw_sample = 8;
         break;
     case AV_PIX_FMT_GBRP9:
         if (!avctx->bits_per_raw_sample)
@@ -1222,6 +1225,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     FFV1Context *f      = avctx->priv_data;
     RangeCoder *const c = &f->slice_context[0]->c;
     AVFrame *const p    = f->picture.f;
+    int used_count      = 0;
     uint8_t keystate    = 128;
     uint8_t *buf_p;
     int i, ret;
@@ -1277,11 +1281,6 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     if (f->version > 3)
         maxsize = AV_INPUT_BUFFER_MIN_SIZE + avctx->width*avctx->height*3LL*4;
 
-    if (maxsize > INT_MAX - AV_INPUT_BUFFER_PADDING_SIZE - 32) {
-        av_log(avctx, AV_LOG_WARNING, "Cannot allocate worst case packet size, the encoding could fail\n");
-        maxsize = INT_MAX - AV_INPUT_BUFFER_PADDING_SIZE - 32;
-    }
-
     if ((ret = ff_alloc_packet2(avctx, pkt, maxsize, 0)) < 0)
         return ret;
 
@@ -1291,7 +1290,11 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     av_frame_unref(p);
     if ((ret = av_frame_ref(p, pict)) < 0)
         return ret;
+#if FF_API_CODED_FRAME
+FF_DISABLE_DEPRECATION_WARNINGS
     avctx->coded_frame->pict_type = AV_PICTURE_TYPE_I;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     if (avctx->gop_size == 0 || f->picture_number % avctx->gop_size == 0) {
         put_rac(c, &keystate, 1);
@@ -1311,17 +1314,11 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
         }
     }
 
-    for (i = 0; i < f->slice_count; i++) {
+    for (i = 1; i < f->slice_count; i++) {
         FFV1Context *fs = f->slice_context[i];
-        uint8_t *start  = pkt->data + pkt->size * (int64_t)i / f->slice_count;
+        uint8_t *start  = pkt->data + (pkt->size - used_count) * (int64_t)i / f->slice_count;
         int len         = pkt->size / f->slice_count;
-        if (i) {
-            ff_init_range_encoder(&fs->c, start, len);
-        } else {
-            av_assert0(fs->c.bytestream_end >= fs->c.bytestream_start + len);
-            av_assert0(fs->c.bytestream < fs->c.bytestream_start + len);
-            fs->c.bytestream_end = fs->c.bytestream_start + len;
-        }
+        ff_init_range_encoder(&fs->c, start, len);
     }
     avctx->execute(avctx, encode_slice, &f->slice_context[0], NULL,
                    f->slice_count, sizeof(void *));

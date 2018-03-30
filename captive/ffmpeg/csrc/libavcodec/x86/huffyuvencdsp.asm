@@ -42,11 +42,10 @@ cglobal diff_bytes, 4,5,2, dst, src1, src2, w
 %define i t0q
 %endmacro
 
-; labels to jump to if w < regsize and w < 0
-%macro DIFF_BYTES_LOOP_PREP 2
+; label to jump to if w < regsize
+%macro DIFF_BYTES_LOOP_PREP 1
     mov                i, wq
     and                i, -2 * regsize
-        js            %2
         jz            %1
     add             dstq, i
     add            src1q, i
@@ -88,7 +87,7 @@ cglobal diff_bytes, 4,5,2, dst, src1, src2, w
 %if mmsize > 16
     ; fall back to narrower xmm
     %define regsize mmsize / 2
-    DIFF_BYTES_LOOP_PREP .setup_loop_gpr_aa, .end_aa
+    DIFF_BYTES_LOOP_PREP .setup_loop_gpr_aa
 .loop2_%1%2:
     DIFF_BYTES_LOOP_CORE %1, %2, xm0, xm1
     add                i, 2 * regsize
@@ -115,7 +114,7 @@ cglobal diff_bytes, 4,5,2, dst, src1, src2, w
 INIT_MMX mmx
 DIFF_BYTES_PROLOGUE
     %define regsize mmsize
-    DIFF_BYTES_LOOP_PREP .skip_main_aa, .end_aa
+    DIFF_BYTES_LOOP_PREP .skip_main_aa
     DIFF_BYTES_BODY    a, a
 %undef i
 %endif
@@ -123,7 +122,7 @@ DIFF_BYTES_PROLOGUE
 INIT_XMM sse2
 DIFF_BYTES_PROLOGUE
     %define regsize mmsize
-    DIFF_BYTES_LOOP_PREP .skip_main_aa, .end_aa
+    DIFF_BYTES_LOOP_PREP .skip_main_aa
     test            dstq, regsize - 1
         jnz     .loop_uu
     test           src1q, regsize - 1
@@ -139,7 +138,7 @@ DIFF_BYTES_PROLOGUE
     %define regsize mmsize
     ; Directly using unaligned SSE2 version is marginally faster than
     ; branching based on arguments.
-    DIFF_BYTES_LOOP_PREP .skip_main_uu, .end_uu
+    DIFF_BYTES_LOOP_PREP .skip_main_uu
     test            dstq, regsize - 1
         jnz     .loop_uu
     test           src1q, regsize - 1

@@ -46,17 +46,15 @@ typedef struct SrtStack {
 
 static void rstrip_spaces_buf(AVBPrint *buf)
 {
-    if (av_bprint_is_complete(buf))
-        while (buf->len > 0 && buf->str[buf->len - 1] == ' ')
-            buf->str[--buf->len] = 0;
+    while (buf->len > 0 && buf->str[buf->len - 1] == ' ')
+        buf->str[--buf->len] = 0;
 }
 
-int ff_htmlmarkup_to_ass(void *log_ctx, AVBPrint *dst, const char *in)
+void ff_htmlmarkup_to_ass(void *log_ctx, AVBPrint *dst, const char *in)
 {
     char *param, buffer[128], tmp[128];
     int len, tag_close, sptr = 1, line_start = 1, an = 0, end = 0;
     SrtStack stack[16];
-    int closing_brace_missing = 0;
 
     stack[0].tag[0] = 0;
     strcpy(stack[0].param[PARAM_SIZE],  "{\\fs}");
@@ -84,20 +82,11 @@ int ff_htmlmarkup_to_ass(void *log_ctx, AVBPrint *dst, const char *in)
                         and all microdvd like styles such as {Y:xxx} */
             len = 0;
             an += sscanf(in, "{\\an%*1u}%n", &len) >= 0 && len > 0;
-
-            if (!closing_brace_missing) {
-                if (   (an != 1 && in[1] == '\\')
-                    || (in[1] && strchr("CcFfoPSsYy", in[1]) && in[2] == ':')) {
-                    char *bracep = strchr(in+2, '}');
-                    if (bracep) {
-                        in = bracep;
-                        break;
-                    } else
-                        closing_brace_missing = 1;
-                }
-            }
-
-            av_bprint_chars(dst, *in, 1);
+            if ((an != 1 && (len = 0, sscanf(in, "{\\%*[^}]}%n", &len) >= 0 && len > 0)) ||
+                (len = 0, sscanf(in, "{%*1[CcFfoPSsYy]:%*[^}]}%n", &len) >= 0 && len > 0)) {
+                in += len - 1;
+            } else
+                av_bprint_chars(dst, *in, 1);
             break;
         case '<':
             tag_close = in[1] == '/';
@@ -157,7 +146,7 @@ int ff_htmlmarkup_to_ass(void *log_ctx, AVBPrint *dst, const char *in)
                                 if (stack[sptr].param[i][0])
                                     av_bprintf(dst, "%s", stack[sptr].param[i]);
                         }
-                    } else if (tagname[0] && !tagname[1] && strspn(tagname, "bisu") == 1) {
+                    } else if (!tagname[1] && strspn(tagname, "bisu") == 1) {
                         av_bprintf(dst, "{\\%c%d}", tagname[0], !tag_close);
                     } else {
                         unknown = 1;
@@ -182,13 +171,8 @@ int ff_htmlmarkup_to_ass(void *log_ctx, AVBPrint *dst, const char *in)
             line_start = 0;
     }
 
-    if (!av_bprint_is_complete(dst))
-        return AVERROR(ENOMEM);
-
     while (dst->len >= 2 && !strncmp(&dst->str[dst->len - 2], "\\N", 2))
         dst->len -= 2;
     dst->str[dst->len] = 0;
     rstrip_spaces_buf(dst);
-
-    return 0;
 }

@@ -352,7 +352,6 @@ static int packed_16bpc_bswap(SwsContext *c, const uint8_t *src[],
         int min_stride         = FFMIN(FFABS(srcstr), FFABS(dststr));
         if(!dstPtr || !srcPtr)
             continue;
-        dstPtr += (srcSliceY >> c->chrDstVSubSample) * dststr;
         for (i = 0; i < (srcSliceH >> c->chrDstVSubSample); i++) {
             for (j = 0; j < min_stride; j++) {
                 dstPtr[j] = av_bswap16(srcPtr[j]);
@@ -558,8 +557,6 @@ static int Rgb16ToPlanarRgb16Wrapper(SwsContext *c, const uint8_t *src[],
     int bpc = dst_format->comp[0].depth;
     int alpha = src_format->flags & AV_PIX_FMT_FLAG_ALPHA;
     int swap = 0;
-    int i;
-
     if ( HAVE_BIGENDIAN && !(src_format->flags & AV_PIX_FMT_FLAG_BE) ||
         !HAVE_BIGENDIAN &&   src_format->flags & AV_PIX_FMT_FLAG_BE)
         swap++;
@@ -573,18 +570,12 @@ static int Rgb16ToPlanarRgb16Wrapper(SwsContext *c, const uint8_t *src[],
                src_format->name, dst_format->name);
         return srcSliceH;
     }
-
-    for(i=0; i<4; i++) {
-        dst2013[i] += stride2013[i] * srcSliceY / 2;
-        dst1023[i] += stride1023[i] * srcSliceY / 2;
-    }
-
     switch (c->srcFormat) {
     case AV_PIX_FMT_RGB48LE:
     case AV_PIX_FMT_RGB48BE:
     case AV_PIX_FMT_RGBA64LE:
     case AV_PIX_FMT_RGBA64BE:
-        packed16togbra16(src[0] + srcSliceY * srcStride[0], srcStride[0],
+        packed16togbra16(src[0], srcStride[0],
                          dst2013, stride2013, srcSliceH, alpha, swap,
                          16 - bpc, c->srcW);
         break;
@@ -592,7 +583,7 @@ static int Rgb16ToPlanarRgb16Wrapper(SwsContext *c, const uint8_t *src[],
     case AV_PIX_FMT_BGR48BE:
     case AV_PIX_FMT_BGRA64LE:
     case AV_PIX_FMT_BGRA64BE:
-        packed16togbra16(src[0] + srcSliceY * srcStride[0], srcStride[0],
+        packed16togbra16(src[0], srcStride[0],
                          dst1023, stride1023, srcSliceH, alpha, swap,
                          16 - bpc, c->srcW);
         break;
@@ -1652,6 +1643,7 @@ void ff_get_unscaled_swscale(SwsContext *c)
          dstFormat == AV_PIX_FMT_GBRP12LE || dstFormat == AV_PIX_FMT_GBRP12BE ||
          dstFormat == AV_PIX_FMT_GBRP14LE || dstFormat == AV_PIX_FMT_GBRP14BE ||
          dstFormat == AV_PIX_FMT_GBRP16LE || dstFormat == AV_PIX_FMT_GBRP16BE ||
+         dstFormat == AV_PIX_FMT_GBRAP12LE || dstFormat == AV_PIX_FMT_GBRAP12BE ||
          dstFormat == AV_PIX_FMT_GBRAP16LE || dstFormat == AV_PIX_FMT_GBRAP16BE ))
         c->swscale = Rgb16ToPlanarRgb16Wrapper;
 
@@ -1660,6 +1652,7 @@ void ff_get_unscaled_swscale(SwsContext *c)
          srcFormat == AV_PIX_FMT_GBRP10LE || srcFormat == AV_PIX_FMT_GBRP10BE ||
          srcFormat == AV_PIX_FMT_GBRP12LE || srcFormat == AV_PIX_FMT_GBRP12BE ||
          srcFormat == AV_PIX_FMT_GBRP14LE || srcFormat == AV_PIX_FMT_GBRP14BE ||
+         srcFormat == AV_PIX_FMT_GBRAP12LE || srcFormat == AV_PIX_FMT_GBRAP12BE ||
          srcFormat == AV_PIX_FMT_GBRAP16LE || srcFormat == AV_PIX_FMT_GBRAP16BE) &&
         (dstFormat == AV_PIX_FMT_RGB48LE  || dstFormat == AV_PIX_FMT_RGB48BE  ||
          dstFormat == AV_PIX_FMT_BGR48LE  || dstFormat == AV_PIX_FMT_BGR48BE  ||
@@ -1701,6 +1694,7 @@ void ff_get_unscaled_swscale(SwsContext *c)
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP12) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP14) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP16) ||
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRAP12) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRAP16) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_RGB444) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_RGB48)  ||
@@ -1785,6 +1779,8 @@ void ff_get_unscaled_swscale(SwsContext *c)
         ff_get_unscaled_swscale_ppc(c);
      if (ARCH_ARM)
          ff_get_unscaled_swscale_arm(c);
+    if (ARCH_AARCH64)
+        ff_get_unscaled_swscale_aarch64(c);
 }
 
 /* Convert the palette to the same packed 32-bit format as the palette */

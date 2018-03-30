@@ -339,10 +339,10 @@ static inline void range_dec_normalize(APEContext *ctx)
 }
 
 /**
- * Calculate culmulative frequency for next symbol. Does NO update!
+ * Calculate cumulative frequency for next symbol. Does NO update!
  * @param ctx decoder context
  * @param tot_f is the total frequency or (code_value)1<<shift
- * @return the culmulative frequency
+ * @return the cumulative frequency
  */
 static inline int range_decode_culfreq(APEContext *ctx, int tot_f)
 {
@@ -1284,8 +1284,16 @@ static void do_apply_filter(APEContext *ctx, int version, APEFilter *f,
             /* Update the adaption coefficients */
             absres = FFABS(res);
             if (absres)
-                *f->adaptcoeffs = ((res & INT32_MIN) ^ (-(1<<30))) >>
-                                  (25 + (absres <= f->avg*3) + (absres <= f->avg*4/3));
+                *f->adaptcoeffs = APESIGN(res) *
+                                  (8 << ((absres > f->avg * 3) + (absres > f->avg * 4 / 3)));
+                /* equivalent to the following code
+                    if (absres <= f->avg * 4 / 3)
+                        *f->adaptcoeffs = APESIGN(res) * 8;
+                    else if (absres <= f->avg * 3)
+                        *f->adaptcoeffs = APESIGN(res) * 16;
+                    else
+                        *f->adaptcoeffs = APESIGN(res) * 32;
+                */
             else
                 *f->adaptcoeffs = 0;
 
@@ -1404,7 +1412,6 @@ static int ape_decode_frame(AVCodecContext *avctx, void *data,
     int32_t *sample24;
     int i, ch, ret;
     int blockstodecode;
-    uint64_t decoded_buffer_size;
 
     /* this should never be negative, but bad things will happen if it is, so
        check it just to make sure. */
@@ -1460,7 +1467,7 @@ static int ape_decode_frame(AVCodecContext *avctx, void *data,
                 skip_bits_long(&s->gb, offset);
         }
 
-        if (!nblocks || nblocks > INT_MAX / 2 / sizeof(*s->decoded_buffer) - 8) {
+        if (!nblocks || nblocks > INT_MAX) {
             av_log(avctx, AV_LOG_ERROR, "Invalid sample count: %"PRIu32".\n",
                    nblocks);
             return AVERROR_INVALIDDATA;
@@ -1486,9 +1493,8 @@ static int ape_decode_frame(AVCodecContext *avctx, void *data,
         blockstodecode = s->samples;
 
     /* reallocate decoded sample buffer if needed */
-    decoded_buffer_size = 2LL * FFALIGN(blockstodecode, 8) * sizeof(*s->decoded_buffer);
-    av_assert0(decoded_buffer_size <= INT_MAX);
-    av_fast_malloc(&s->decoded_buffer, &s->decoded_size, decoded_buffer_size);
+    av_fast_malloc(&s->decoded_buffer, &s->decoded_size,
+                   2 * FFALIGN(blockstodecode, 8) * sizeof(*s->decoded_buffer));
     if (!s->decoded_buffer)
         return AVERROR(ENOMEM);
     memset(s->decoded_buffer, 0, s->decoded_size);

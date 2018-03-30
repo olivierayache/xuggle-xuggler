@@ -93,12 +93,17 @@ AVFilterGraph *avfilter_graph_alloc(void)
 
 void ff_filter_graph_remove_filter(AVFilterGraph *graph, AVFilterContext *filter)
 {
-    int i;
+    int i, j;
     for (i = 0; i < graph->nb_filters; i++) {
         if (graph->filters[i] == filter) {
             FFSWAP(AVFilterContext*, graph->filters[i],
                    graph->filters[graph->nb_filters - 1]);
             graph->nb_filters--;
+            filter->graph = NULL;
+            for (j = 0; j<filter->nb_outputs; j++)
+                if (filter->outputs[j])
+                    filter->outputs[j]->graph = NULL;
+
             return;
         }
     }
@@ -857,8 +862,6 @@ static void swap_samplerates_on_filter(AVFilterContext *filter)
 
         for (j = 0; j < outlink->in_samplerates->nb_formats; j++) {
             int diff = abs(sample_rate - outlink->in_samplerates->formats[j]);
-
-            av_assert0(diff < INT_MAX); // This would lead to the use of uninitialized best_diff but is only possible with invalid sample rates
 
             if (diff < best_diff) {
                 best_diff = diff;

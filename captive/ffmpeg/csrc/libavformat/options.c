@@ -102,18 +102,6 @@ static const AVClass av_format_context_class = {
 static int io_open_default(AVFormatContext *s, AVIOContext **pb,
                            const char *url, int flags, AVDictionary **options)
 {
-    int loglevel;
-
-    if (!strcmp(url, s->filename) ||
-        s->iformat && !strcmp(s->iformat->name, "image2") ||
-        s->oformat && !strcmp(s->oformat->name, "image2")
-    ) {
-        loglevel = AV_LOG_DEBUG;
-    } else
-        loglevel = AV_LOG_INFO;
-
-    av_log(s, loglevel, "Opening \'%s\' for %s\n", url, flags & AVIO_FLAG_WRITE ? "writing" : "reading");
-
 #if FF_API_OLD_OPEN_CALLBACKS
 FF_DISABLE_DEPRECATION_WARNINGS
     if (s->open_cb)
@@ -121,7 +109,7 @@ FF_DISABLE_DEPRECATION_WARNINGS
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
-    return ffio_open_whitelist(pb, url, flags, &s->interrupt_callback, options, s->protocol_whitelist);
+    return ffio_open_whitelist(pb, url, flags, &s->interrupt_callback, options, s->protocol_whitelist, s->protocol_blacklist);
 }
 
 static void io_close_default(AVFormatContext *s, AVIOContext *pb)

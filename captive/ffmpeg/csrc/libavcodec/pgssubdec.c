@@ -300,11 +300,8 @@ static int parse_object_segment(AVCodecContext *avctx,
 
     av_fast_padded_malloc(&object->rle, &object->rle_buffer_size, rle_bitmap_len);
 
-    if (!object->rle) {
-        object->rle_data_len = 0;
-        object->rle_remaining_len = 0;
+    if (!object->rle)
         return AVERROR(ENOMEM);
-    }
 
     memcpy(object->rle, buf, buf_size);
     object->rle_data_len = buf_size;
@@ -357,7 +354,7 @@ static int parse_palette_segment(AVCodecContext *avctx,
         cb        = bytestream_get_byte(&buf);
         alpha     = bytestream_get_byte(&buf);
 
-        /* Default to BT.709 colorimetry. In case of <= 576 height use BT.601 */
+        /* Default to BT.709 colorspace. In case of <= 576 height use BT.601 */
         if (avctx->height <= 0 || avctx->height > 576) {
             YUV_TO_RGB1_CCIR_BT709(cb, cr);
         } else {
@@ -532,8 +529,6 @@ static int display_end_segment(AVCodecContext *avctx, void *data,
     }
     for (i = 0; i < ctx->presentation.object_count; i++) {
         PGSSubObject *object;
-        AVSubtitleRect *rect;
-        int j;
 
         sub->rects[i]  = av_mallocz(sizeof(*sub->rects[0]));
         if (!sub->rects[i]) {
@@ -561,13 +556,12 @@ static int display_end_segment(AVCodecContext *avctx, void *data,
 
         sub->rects[i]->x    = ctx->presentation.objects[i].x;
         sub->rects[i]->y    = ctx->presentation.objects[i].y;
+        sub->rects[i]->w    = object->w;
+        sub->rects[i]->h    = object->h;
+
+        sub->rects[i]->linesize[0] = object->w;
 
         if (object->rle) {
-            sub->rects[i]->w    = object->w;
-            sub->rects[i]->h    = object->h;
-
-            sub->rects[i]->linesize[0] = object->w;
-
             if (object->rle_remaining_len) {
                 av_log(avctx, AV_LOG_ERROR, "RLE data length %u is %u bytes shorter than expected\n",
                        object->rle_data_len, object->rle_remaining_len);
@@ -601,11 +595,15 @@ static int display_end_segment(AVCodecContext *avctx, void *data,
 
 #if FF_API_AVPICTURE
 FF_DISABLE_DEPRECATION_WARNINGS
+{
+        AVSubtitleRect *rect;
+        int j;
         rect = sub->rects[i];
         for (j = 0; j < 4; j++) {
             rect->pict.data[j] = rect->data[j];
             rect->pict.linesize[j] = rect->linesize[j];
         }
+}
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
     }
