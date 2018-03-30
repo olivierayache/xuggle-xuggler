@@ -23,7 +23,6 @@
 #include "libavutil/channel_layout.h"
 #include "libavutil/ffmath.h"
 #include "libavutil/float_dsp.h"
-#include "libavutil/internal.h"
 #include "avcodec.h"
 #include "bytestream.h"
 #include "fft.h"

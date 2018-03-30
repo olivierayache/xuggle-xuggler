@@ -226,49 +226,6 @@ static int wav_parse_xma2_tag(AVFormatContext *s, int64_t size, AVStream **st)
     return 0;
 }
 
-static int wav_parse_xma2_tag(AVFormatContext *s, int64_t size, AVStream **st)
-{
-    AVIOContext *pb = s->pb;
-    int num_streams, i, channels = 0;
-
-    if (size < 44)
-        return AVERROR_INVALIDDATA;
-
-    *st = avformat_new_stream(s, NULL);
-    if (!*st)
-        return AVERROR(ENOMEM);
-
-    (*st)->codec->codec_type = AVMEDIA_TYPE_AUDIO;
-    (*st)->codec->codec_id   = AV_CODEC_ID_XMA2;
-    (*st)->need_parsing      = AVSTREAM_PARSE_FULL_RAW;
-
-    avio_skip(pb, 1);
-    num_streams = avio_r8(pb);
-    if (size < 40 + num_streams * 4)
-        return AVERROR_INVALIDDATA;
-    avio_skip(pb, 10);
-    (*st)->codec->sample_rate = avio_rb32(pb);
-    avio_skip(pb, 12);
-    (*st)->duration = avio_rb32(pb);
-    avio_skip(pb, 8);
-
-    for (i = 0; i < num_streams; i++) {
-        channels += avio_r8(pb);
-        avio_skip(pb, 3);
-    }
-    (*st)->codec->channels = channels;
-
-    if ((*st)->codec->channels <= 0 || (*st)->codec->sample_rate <= 0)
-        return AVERROR_INVALIDDATA;
-
-    avpriv_set_pts_info(*st, 64, 1, (*st)->codec->sample_rate);
-    if (ff_alloc_extradata((*st)->codec, 34))
-        return AVERROR(ENOMEM);
-    memset((*st)->codec->extradata, 0, 34);
-
-    return 0;
-}
-
 static inline int wav_parse_bext_string(AVFormatContext *s, const char *key,
                                         int length)
 {

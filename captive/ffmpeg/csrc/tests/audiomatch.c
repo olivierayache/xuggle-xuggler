@@ -107,6 +107,4 @@ int main(int argc, char **argv){
         }
     }
     printf("presig: %d postsig:%d c:%7.4f lenerr:%d\n", bestpos, datlen - siglen - bestpos, bestc / sigamp, datlen - siglen);
-
-    return 0;
 }

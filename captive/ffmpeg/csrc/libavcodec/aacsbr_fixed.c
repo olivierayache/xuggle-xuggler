@@ -568,8 +568,7 @@ static void sbr_hf_assemble(int Y1[38][64][2],
                 int A = (1-((indexsine+(kx & 1))&2));
                 int B = (A^(-idx)) + idx;
                 int *out = &Y1[i][kx][idx];
-                int shift;
-                unsigned round;
+                int shift, round;
 
                 SoftFloat *in  = sbr->s_m[e];
                 for (m = 0; m+1 < m_max; m+=2) {
@@ -582,12 +581,12 @@ static void sbr_hf_assemble(int Y1[38][64][2],
                     }
                     if (shift < 32) {
                         round = 1 << (shift-1);
-                        out[2*m  ] += (int)(in[m  ].mant * A + round) >> shift;
+                        out[2*m  ] += (in[m  ].mant * A + round) >> shift;
                     }
 
                     if (shift2 < 32) {
                         round = 1 << (shift2-1);
-                        out[2*m+2] += (int)(in[m+1].mant * B + round) >> shift2;
+                        out[2*m+2] += (in[m+1].mant * B + round) >> shift2;
                     }
                 }
                 if(m_max&1)
@@ -598,7 +597,7 @@ static void sbr_hf_assemble(int Y1[38][64][2],
                         return;
                     } else if (shift < 32) {
                         round = 1 << (shift-1);
-                        out[2*m  ] += (int)(in[m  ].mant * A + round) >> shift;
+                        out[2*m  ] += (in[m  ].mant * A + round) >> shift;
                     }
                 }
             }
