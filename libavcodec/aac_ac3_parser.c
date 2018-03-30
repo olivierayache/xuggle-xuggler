@@ -86,17 +86,7 @@ get_next:
            the frame). */
         if (avctx->codec_id != AV_CODEC_ID_AAC) {
             avctx->sample_rate = s->sample_rate;
-
-            /* (E-)AC-3: allow downmixing to stereo or mono */
-            if (s->channels > 1 &&
-                avctx->request_channel_layout == AV_CH_LAYOUT_MONO) {
-                avctx->channels       = 1;
-                avctx->channel_layout = AV_CH_LAYOUT_MONO;
-            } else if (s->channels > 2 &&
-                       avctx->request_channel_layout == AV_CH_LAYOUT_STEREO) {
-                avctx->channels       = 2;
-                avctx->channel_layout = AV_CH_LAYOUT_STEREO;
-            } else {
+            if (avctx->codec_id != AV_CODEC_ID_EAC3) {
                 avctx->channels = s->channels;
                 avctx->channel_layout = s->channel_layout;
             }
@@ -104,7 +94,8 @@ get_next:
             avctx->audio_service_type = s->service_type;
         }
 
-        avctx->bit_rate = s->bit_rate;
+        if (avctx->codec_id != AV_CODEC_ID_EAC3)
+            avctx->bit_rate = s->bit_rate;
     }
 
     return i;
