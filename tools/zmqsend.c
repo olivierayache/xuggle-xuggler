@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 {
     AVBPrint src;
     char c, *src_buf, *recv_buf;
-    int recv_buf_size, ret = 0;
+    int recv_buf_size, ret;
     void *zmq_ctx, *socket;
     const char *bind_address = "tcp://localhost:5555";
     const char *infilename = NULL;

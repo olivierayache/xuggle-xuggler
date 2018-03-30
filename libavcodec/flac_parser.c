@@ -40,7 +40,7 @@
 #include "flac.h"
 
 /** maximum number of adjacent headers that compare CRCs against each other   */
-#define FLAC_MAX_SEQUENTIAL_HEADERS 3
+#define FLAC_MAX_SEQUENTIAL_HEADERS 4
 /** minimum number of headers buffered and checked before returning frames    */
 #define FLAC_MIN_HEADERS 10
 /** estimate for average size of a FLAC frame                                 */
@@ -586,12 +586,10 @@ static int flac_parse(AVCodecParserContext *s, AVCodecContext *avctx,
             temp = curr->next;
             av_freep(&curr->link_penalty);
             av_free(curr);
-            fpc->nb_headers_buffered--;
         }
         fpc->headers = fpc->best_header->next;
         av_freep(&fpc->best_header->link_penalty);
         av_freep(&fpc->best_header);
-        fpc->nb_headers_buffered--;
     }
 
     /* Find and score new headers.                                     */

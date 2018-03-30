@@ -89,7 +89,7 @@ static const AVClass av_codec_context_class = {
     .get_category            = get_category,
 };
 
-int avcodec_get_context_defaults3(AVCodecContext *s, const AVCodec *codec)
+static int init_context_defaults(AVCodecContext *s, const AVCodec *codec)
 {
     int flags=0;
     memset(s, 0, sizeof(AVCodecContext));
@@ -146,6 +146,13 @@ int avcodec_get_context_defaults3(AVCodecContext *s, const AVCodec *codec)
     return 0;
 }
 
+#if FF_API_GET_CONTEXT_DEFAULTS
+int avcodec_get_context_defaults3(AVCodecContext *s, const AVCodec *codec)
+{
+    return init_context_defaults(s, codec);
+}
+#endif
+
 AVCodecContext *avcodec_alloc_context3(const AVCodec *codec)
 {
     AVCodecContext *avctx= av_malloc(sizeof(AVCodecContext));
@@ -153,7 +160,7 @@ AVCodecContext *avcodec_alloc_context3(const AVCodec *codec)
     if (!avctx)
         return NULL;
 
-    if(avcodec_get_context_defaults3(avctx, codec) < 0){
+    if (init_context_defaults(avctx, codec) < 0) {
         av_free(avctx);
         return NULL;
     }
@@ -179,23 +186,7 @@ void avcodec_free_context(AVCodecContext **pavctx)
     av_freep(pavctx);
 }
 
-static void copy_context_reset(AVCodecContext *avctx)
-{
-    av_opt_free(avctx);
-#if FF_API_CODED_FRAME
-FF_DISABLE_DEPRECATION_WARNINGS
-    av_frame_free(&avctx->coded_frame);
-FF_ENABLE_DEPRECATION_WARNINGS
-#endif
-    av_freep(&avctx->rc_override);
-    av_freep(&avctx->intra_matrix);
-    av_freep(&avctx->inter_matrix);
-    av_freep(&avctx->extradata);
-    av_freep(&avctx->subtitle_header);
-    avctx->subtitle_header_size = 0;
-    avctx->extradata_size = 0;
-}
-
+#if FF_API_COPY_CONTEXT
 int avcodec_copy_context(AVCodecContext *dest, const AVCodecContext *src)
 {
     const AVCodec *orig_codec = dest->codec;
@@ -208,7 +199,12 @@ int avcodec_copy_context(AVCodecContext *dest, const AVCodecContext *src)
         return AVERROR(EINVAL);
     }
 
-    copy_context_reset(dest);
+    av_opt_free(dest);
+    av_freep(&dest->rc_override);
+    av_freep(&dest->intra_matrix);
+    av_freep(&dest->inter_matrix);
+    av_freep(&dest->extradata);
+    av_freep(&dest->subtitle_header);
 
     memcpy(dest, src, sizeof(*dest));
     av_opt_copy(dest, src);
@@ -237,6 +233,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     dest->inter_matrix    = NULL;
     dest->rc_override     = NULL;
     dest->subtitle_header = NULL;
+    dest->hw_frames_ctx   = NULL;
 
 #define alloc_and_copy_or_fail(obj, size, pad) \
     if (src->obj && size > 0) { \
@@ -257,12 +254,27 @@ FF_ENABLE_DEPRECATION_WARNINGS
     av_assert0(dest->subtitle_header_size == src->subtitle_header_size);
 #undef alloc_and_copy_or_fail
 
+    if (src->hw_frames_ctx) {
+        dest->hw_frames_ctx = av_buffer_ref(src->hw_frames_ctx);
+        if (!dest->hw_frames_ctx)
+            goto fail;
+    }
+
     return 0;
 
 fail:
-    copy_context_reset(dest);
+    av_freep(&dest->subtitle_header);
+    av_freep(&dest->rc_override);
+    av_freep(&dest->intra_matrix);
+    av_freep(&dest->inter_matrix);
+    av_freep(&dest->extradata);
+    av_buffer_unref(&dest->hw_frames_ctx);
+    dest->subtitle_header_size = 0;
+    dest->extradata_size = 0;
+    av_opt_free(dest);
     return AVERROR(ENOMEM);
 }
+#endif
 
 const AVClass *avcodec_get_class(void)
 {

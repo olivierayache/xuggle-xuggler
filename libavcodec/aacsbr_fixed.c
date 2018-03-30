@@ -163,7 +163,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac)
             for (k = 0; k < sbr->n[sbr->data[0].bs_freq_res[e]]; k++) {
                 SoftFloat temp1, temp2, fac;
 
-                temp1.exp = sbr->data[0].env_facs[e][k].mant * alpha + 14;
+                temp1.exp = sbr->data[0].env_facs_q[e][k] * alpha + 14;
                 if (temp1.exp & 1)
                   temp1.mant = 759250125;
                 else
@@ -174,7 +174,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac)
                     temp1 = FLOAT_1;
                 }
 
-                temp2.exp = (pan_offset - sbr->data[1].env_facs[e][k].mant) * alpha;
+                temp2.exp = (pan_offset - sbr->data[1].env_facs_q[e][k]) * alpha;
                 if (temp2.exp & 1)
                   temp2.mant = 759250125;
                 else
@@ -190,13 +190,10 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac)
                 SoftFloat temp1, temp2, fac;
 
                 temp1.exp = NOISE_FLOOR_OFFSET - \
-                    sbr->data[0].noise_facs[e][k].mant + 2;
+                    sbr->data[0].noise_facs_q[e][k] + 2;
                 temp1.mant = 0x20000000;
-                if (temp1.exp > 66) { // temp1 > 1E20
-                    av_log(NULL, AV_LOG_ERROR, "envelope scalefactor overflow in dequant\n");
-                    temp1 = FLOAT_1;
-                }
-                temp2.exp = 12 - sbr->data[1].noise_facs[e][k].mant + 1;
+                av_assert0(temp1.exp <= 66);
+                temp2.exp = 12 - sbr->data[1].noise_facs_q[e][k] + 1;
                 temp2.mant = 0x20000000;
                 fac   = av_div_sf(temp1, av_add_sf(FLOAT_1, temp2));
                 sbr->data[0].noise_facs[e][k] = fac;
@@ -210,7 +207,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac)
                 for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[e]]; k++){
                     SoftFloat temp1;
 
-                    temp1.exp = alpha * sbr->data[ch].env_facs[e][k].mant + 12;
+                    temp1.exp = alpha * sbr->data[ch].env_facs_q[e][k] + 12;
                     if (temp1.exp & 1)
                         temp1.mant = 759250125;
                     else
@@ -225,7 +222,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac)
             for (e = 1; e <= sbr->data[ch].bs_num_noise; e++)
                 for (k = 0; k < sbr->n_q; k++){
                     sbr->data[ch].noise_facs[e][k].exp = NOISE_FLOOR_OFFSET - \
-                        sbr->data[ch].noise_facs[e][k].mant + 1;
+                        sbr->data[ch].noise_facs_q[e][k] + 1;
                     sbr->data[ch].noise_facs[e][k].mant = 0x20000000;
                 }
         }
@@ -291,8 +288,6 @@ static void sbr_hf_inverse_filter(SBRDSPContext *dsp,
         shift = a00.exp;
         if (shift >= 3)
             alpha0[k][0] = 0x7fffffff;
-        else if (shift <= -30)
-            alpha0[k][0] = 0;
         else {
             a00.mant <<= 1;
             shift = 2-shift;
@@ -307,8 +302,6 @@ static void sbr_hf_inverse_filter(SBRDSPContext *dsp,
         shift = a01.exp;
         if (shift >= 3)
             alpha0[k][1] = 0x7fffffff;
-        else if (shift <= -30)
-            alpha0[k][1] = 0;
         else {
             a01.mant <<= 1;
             shift = 2-shift;
@@ -322,8 +315,6 @@ static void sbr_hf_inverse_filter(SBRDSPContext *dsp,
         shift = a10.exp;
         if (shift >= 3)
             alpha1[k][0] = 0x7fffffff;
-        else if (shift <= -30)
-            alpha1[k][0] = 0;
         else {
             a10.mant <<= 1;
             shift = 2-shift;
@@ -338,8 +329,6 @@ static void sbr_hf_inverse_filter(SBRDSPContext *dsp,
         shift = a11.exp;
         if (shift >= 3)
             alpha1[k][1] = 0x7fffffff;
-        else if (shift <= -30)
-            alpha1[k][1] = 0;
         else {
             a11.mant <<= 1;
             shift = 2-shift;
@@ -578,25 +567,20 @@ static void sbr_hf_assemble(int Y1[38][64][2],
 
                 SoftFloat *in  = sbr->s_m[e];
                 for (m = 0; m+1 < m_max; m+=2) {
-                    shift = 22 - in[m  ].exp;
-                    if (shift < 32) {
-                        round = 1 << (shift-1);
-                        out[2*m  ] += (in[m  ].mant * A + round) >> shift;
-                    }
+                  shift = 22 - in[m  ].exp;
+                  round = 1 << (shift-1);
+                  out[2*m  ] += (in[m  ].mant * A + round) >> shift;
 
-                    shift = 22 - in[m+1].exp;
-                    if (shift < 32) {
-                        round = 1 << (shift-1);
-                        out[2*m+2] += (in[m+1].mant * B + round) >> shift;
-                    }
+                  shift = 22 - in[m+1].exp;
+                  round = 1 << (shift-1);
+                  out[2*m+2] += (in[m+1].mant * B + round) >> shift;
                 }
                 if(m_max&1)
                 {
-                    shift = 22 - in[m  ].exp;
-                    if (shift < 32) {
-                        round = 1 << (shift-1);
-                        out[2*m  ] += (in[m  ].mant * A + round) >> shift;
-                    }
+                  shift = 22 - in[m  ].exp;
+                  round = 1 << (shift-1);
+
+                  out[2*m  ] += (in[m  ].mant * A + round) >> shift;
                 }
             }
             indexnoise = (indexnoise + m_max) & 0x1ff;

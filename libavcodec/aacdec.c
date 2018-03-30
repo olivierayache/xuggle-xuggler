@@ -50,11 +50,12 @@
 #include "aac.h"
 #include "aactab.h"
 #include "aacdectab.h"
-#include "cbrt_tablegen.h"
+#include "cbrt_data.h"
 #include "sbr.h"
 #include "aacsbr.h"
 #include "mpeg4audio.h"
 #include "aacadtsdec.h"
+#include "profiles.h"
 #include "libavutil/intfloat.h"
 
 #include <errno.h>
@@ -423,8 +424,6 @@ static int read_payload_length_info(struct LATMContext *ctx, GetBitContext *gb)
     if (ctx->frame_length_type == 0) {
         int mux_slot_length = 0;
         do {
-            if (get_bits_left(gb) < 8)
-                return AVERROR_INVALIDDATA;
             tmp = get_bits(gb, 8);
             mux_slot_length += tmp;
         } while (tmp == 255);
@@ -454,7 +453,7 @@ static int read_audio_mux_element(struct LATMContext *latmctx,
     }
     if (latmctx->audio_mux_version_A == 0) {
         int mux_slot_length_bytes = read_payload_length_info(latmctx, gb);
-        if (mux_slot_length_bytes < 0 || mux_slot_length_bytes * 8LL > get_bits_left(gb)) {
+        if (mux_slot_length_bytes * 8 > get_bits_left(gb)) {
             av_log(latmctx->aac_ctx.avctx, AV_LOG_ERROR, "incomplete frame\n");
             return AVERROR_INVALIDDATA;
         } else if (mux_slot_length_bytes * 8 + 256 < get_bits_left(gb)) {
@@ -553,10 +552,11 @@ AVCodec ff_aac_decoder = {
         AV_SAMPLE_FMT_FLTP, AV_SAMPLE_FMT_NONE
     },
     .capabilities    = AV_CODEC_CAP_CHANNEL_CONF | AV_CODEC_CAP_DR1,
+    .caps_internal   = FF_CODEC_CAP_INIT_THREADSAFE,
     .channel_layouts = aac_channel_layout,
     .flush = flush,
     .priv_class      = &aac_decoder_class,
-    .profiles        = profiles,
+    .profiles        = NULL_IF_CONFIG_SMALL(ff_aac_profiles),
 };
 
 /*
@@ -577,7 +577,8 @@ AVCodec ff_aac_latm_decoder = {
         AV_SAMPLE_FMT_FLTP, AV_SAMPLE_FMT_NONE
     },
     .capabilities    = AV_CODEC_CAP_CHANNEL_CONF | AV_CODEC_CAP_DR1,
+    .caps_internal   = FF_CODEC_CAP_INIT_THREADSAFE,
     .channel_layouts = aac_channel_layout,
     .flush = flush,
-    .profiles        = profiles,
+    .profiles        = NULL_IF_CONFIG_SMALL(ff_aac_profiles),
 };

@@ -24,7 +24,6 @@
 
 #include "libavutil/imgutils.h"
 #include "avcodec.h"
-#include "internal.h"
 #include "pnm.h"
 
 static inline int pnm_space(int c)
@@ -62,7 +61,6 @@ int ff_pnm_decode_header(AVCodecContext *avctx, PNMContext * const s)
 {
     char buf1[32], tuple_type[32];
     int h, w, depth, maxval;
-    int ret;
 
     pnm_get(s, buf1, sizeof(buf1));
     if(buf1[0] != 'P')
@@ -112,9 +110,8 @@ int ff_pnm_decode_header(AVCodecContext *avctx, PNMContext * const s)
         if (w <= 0 || h <= 0 || maxval <= 0 || depth <= 0 || tuple_type[0] == '\0' || av_image_check_size(w, h, 0, avctx) || s->bytestream >= s->bytestream_end)
             return AVERROR_INVALIDDATA;
 
-        ret = ff_set_dimensions(avctx, w, h);
-        if (ret < 0)
-            return ret;
+        avctx->width  = w;
+        avctx->height = h;
         s->maxval     = maxval;
         if (depth == 1) {
             if (maxval == 1) {
@@ -156,9 +153,8 @@ int ff_pnm_decode_header(AVCodecContext *avctx, PNMContext * const s)
     if(w <= 0 || h <= 0 || av_image_check_size(w, h, 0, avctx) || s->bytestream >= s->bytestream_end)
         return AVERROR_INVALIDDATA;
 
-    ret = ff_set_dimensions(avctx, w, h);
-    if (ret < 0)
-        return ret;
+    avctx->width  = w;
+    avctx->height = h;
 
     if (avctx->pix_fmt != AV_PIX_FMT_MONOWHITE && avctx->pix_fmt != AV_PIX_FMT_MONOBLACK) {
         pnm_get(s, buf1, sizeof(buf1));

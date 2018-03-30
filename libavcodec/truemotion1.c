@@ -177,10 +177,10 @@ static int make_ydt15_entry(int p1, int p2, int16_t *ydt)
     int lo, hi;
 
     lo = ydt[p1];
-    lo += (lo * 32) + (lo * 1024);
+    lo += (lo << 5) + (lo << 10);
     hi = ydt[p2];
-    hi += (hi * 32) + (hi * 1024);
-    return (lo + (hi * (1U << 16))) * 2;
+    hi += (hi << 5) + (hi << 10);
+    return (lo + (hi << 16)) << 1;
 }
 
 static int make_cdt15_entry(int p1, int p2, int16_t *cdt)
@@ -188,9 +188,9 @@ static int make_cdt15_entry(int p1, int p2, int16_t *cdt)
     int r, b, lo;
 
     b = cdt[p2];
-    r = cdt[p1] * 1024;
+    r = cdt[p1] << 10;
     lo = b + r;
-    return (lo + (lo * (1U << 16))) * 2;
+    return (lo + (lo << 16)) << 1;
 }
 
 #if HAVE_BIGENDIAN
@@ -396,7 +396,7 @@ static int truemotion1_decode_header(TrueMotion1Context *s)
     }
 
     if (compression_types[header.compression].algorithm == ALGO_RGB24H) {
-        new_pix_fmt = AV_PIX_FMT_RGB32;
+        new_pix_fmt = AV_PIX_FMT_0RGB32;
         width_shift = 1;
     } else
         new_pix_fmt = AV_PIX_FMT_RGB555; // RGB565 is supported as well
@@ -645,7 +645,8 @@ static void truemotion1_decode_16bit(TrueMotion1Context *s)
         current_pixel_pair = (unsigned int *)current_line;
         vert_pred = s->vert_pred;
         mb_change_index = 0;
-        mb_change_byte = mb_change_bits[mb_change_index++];
+        if (!keyframe)
+            mb_change_byte = mb_change_bits[mb_change_index++];
         mb_change_byte_mask = 0x01;
         pixels_left = s->avctx->width;
 

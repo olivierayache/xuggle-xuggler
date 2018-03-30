@@ -105,7 +105,6 @@ static inline int get_bs(cavs_vector *mvP, cavs_vector *mvQ, int b)
  * | 6 | 7 |
  * 1   3   |
  * ---------
- *
  */
 void ff_cavs_filter(AVSContext *h, enum cavs_mb mb_type)
 {
@@ -538,7 +537,8 @@ void ff_cavs_inter(AVSContext *h, enum cavs_mb mb_type)
 static inline void scale_mv(AVSContext *h, int *d_x, int *d_y,
                             cavs_vector *src, int distp)
 {
-    int64_t den = h->scale_den[FFMAX(src->ref, 0)];
+    int den = h->scale_den[FFMAX(src->ref, 0)];
+
     *d_x = (src->x * distp * den + 256 + FF_SIGNBIT(src->x)) >> 9;
     *d_y = (src->y * distp * den + 256 + FF_SIGNBIT(src->y)) >> 9;
 }
@@ -613,15 +613,8 @@ void ff_cavs_mv(AVSContext *h, enum cavs_mv_loc nP, enum cavs_mv_loc nC,
         mv_pred_median(h, mvP, mvA, mvB, mvC);
 
     if (mode < MV_PRED_PSKIP) {
-        int mx = get_se_golomb(&h->gb) + (unsigned)mvP->x;
-        int my = get_se_golomb(&h->gb) + (unsigned)mvP->y;
-
-        if (mx != (int16_t)mx || my != (int16_t)my) {
-            av_log(h->avctx, AV_LOG_ERROR, "MV %d %d out of supported range\n", mx, my);
-        } else {
-            mvP->x = mx;
-            mvP->y = my;
-        }
+        mvP->x += get_se_golomb(&h->gb);
+        mvP->y += get_se_golomb(&h->gb);
     }
     set_mvs(mvP, size);
 }

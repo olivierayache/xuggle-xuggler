@@ -185,7 +185,6 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
 
     s->avctx = avctx;
 
-    ff_ac3_common_init();
     ac3_tables_init();
     ff_mdct_init(&s->imdct_256, 8, 1, 1.0);
     ff_mdct_init(&s->imdct_512, 9, 1, 1.0);
@@ -208,14 +207,6 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
         avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     /* allow downmixing to stereo or mono */
-#if FF_API_REQUEST_CHANNELS
-FF_DISABLE_DEPRECATION_WARNINGS
-    if (avctx->request_channels == 1)
-        avctx->request_channel_layout = AV_CH_LAYOUT_MONO;
-    else if (avctx->request_channels == 2)
-        avctx->request_channel_layout = AV_CH_LAYOUT_STEREO;
-FF_ENABLE_DEPRECATION_WARNINGS
-#endif
     if (avctx->channels > 1 &&
         avctx->request_channel_layout == AV_CH_LAYOUT_MONO)
         avctx->channels = 1;
@@ -306,7 +297,7 @@ static int parse_frame_header(AC3DecodeContext *s)
     AC3HeaderInfo hdr, *phdr=&hdr;
     int err;
 
-    err = avpriv_ac3_parse_header2(&s->gbc, &phdr);
+    err = avpriv_ac3_parse_header(&s->gbc, &phdr);
     if (err)
         return err;
 
@@ -420,7 +411,8 @@ static void set_downmix_coeffs(AC3DecodeContext *s)
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding
  */
-static int decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
+static int decode_exponents(AC3DecodeContext *s,
+                            GetBitContext *gbc, int exp_strategy, int ngrps,
                             uint8_t absexp, int8_t *dexps)
 {
     int i, j, grp, group_size;
@@ -440,8 +432,10 @@ static int decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
     prevexp = absexp;
     for (i = 0, j = 0; i < ngrps * 3; i++) {
         prevexp += dexp[i] - 2;
-        if (prevexp > 24U)
+        if (prevexp > 24U) {
+            av_log(s->avctx, AV_LOG_ERROR, "exponent %d is out-of-range\n", prevexp);
             return -1;
+        }
         switch (group_size) {
         case 4: dexps[j++] = prevexp;
                 dexps[j++] = prevexp;
@@ -750,31 +744,30 @@ static void ac3_upmix_delay(AC3DecodeContext *s)
  * @param[in] default_band_struct default band structure table
  * @param[out] num_bands number of bands (optionally NULL)
  * @param[out] band_sizes array containing the number of bins in each band (optionally NULL)
- * @param[in,out] band_struct current band structure
  */
 static void decode_band_structure(GetBitContext *gbc, int blk, int eac3,
                                   int ecpl, int start_subband, int end_subband,
                                   const uint8_t *default_band_struct,
-                                  int *num_bands, uint8_t *band_sizes,
-                                  uint8_t *band_struct, int band_struct_size)
+                                  int *num_bands, uint8_t *band_sizes)
 {
     int subbnd, bnd, n_subbands, n_bands=0;
     uint8_t bnd_sz[22];
+    uint8_t coded_band_struct[22];
+    const uint8_t *band_struct;
 
     n_subbands = end_subband - start_subband;
-
-    if (!blk)
-        memcpy(band_struct, default_band_struct, band_struct_size);
-
-    av_assert0(band_struct_size >= start_subband + n_subbands);
-
-    band_struct += start_subband + 1;
 
     /* decode band structure from bitstream or use default */
     if (!eac3 || get_bits1(gbc)) {
         for (subbnd = 0; subbnd < n_subbands - 1; subbnd++) {
-            band_struct[subbnd] = get_bits1(gbc);
+            coded_band_struct[subbnd] = get_bits1(gbc);
         }
+        band_struct = coded_band_struct;
+    } else if (!blk) {
+        band_struct = &default_band_struct[start_subband+1];
+    } else {
+        /* no change in band structure */
+        return;
     }
 
     /* calculate number of bands and band sizes based on band structure.
@@ -901,8 +894,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                                   start_subband, end_subband,
                                   ff_eac3_default_spx_band_struct,
                                   &s->num_spx_bands,
-                                  s->spx_band_sizes,
-                                  s->spx_band_struct, sizeof(s->spx_band_struct));
+                                  s->spx_band_sizes);
         }
     }
     if (!s->eac3 || !s->spx_in_use) {
@@ -1036,8 +1028,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             decode_band_structure(gbc, blk, s->eac3, 0, cpl_start_subband,
                                   cpl_end_subband,
                                   ff_eac3_default_cpl_band_struct,
-                                  &s->num_cpl_bands, s->cpl_band_sizes,
-                                  s->cpl_band_struct, sizeof(s->cpl_band_struct));
+                                  &s->num_cpl_bands, s->cpl_band_sizes);
         } else {
             /* coupling not in use */
             for (ch = 1; ch <= fbw_channels; ch++) {
@@ -1155,10 +1146,9 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     for (ch = !cpl_in_use; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
-            if (decode_exponents(gbc, s->exp_strategy[blk][ch],
+            if (decode_exponents(s, gbc, s->exp_strategy[blk][ch],
                                  s->num_exp_groups[ch], s->dexps[ch][0],
                                  &s->dexps[ch][s->start_freq[ch]+!!ch])) {
-                av_log(s->avctx, AV_LOG_ERROR, "exponent out-of-range\n");
                 return AVERROR_INVALIDDATA;
             }
             if (ch != CPL_CH && ch != s->lfe_ch)
@@ -1338,7 +1328,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     for (ch = 1; ch <= s->channels; ch++) {
         int audio_channel = 0;
         INTFLOAT gain;
-        if (s->channel_mode == AC3_CHMODE_DUALMONO && ch <= 2)
+        if (s->channel_mode == AC3_CHMODE_DUALMONO)
             audio_channel = 2-ch;
         if (s->heavy_compression && s->compression_exists[audio_channel])
             gain = s->heavy_dynamic_range[audio_channel];
@@ -1455,8 +1445,9 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data,
             /* skip frame if CRC is ok. otherwise use error concealment. */
             /* TODO: add support for substreams and dependent frames */
             if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT || s->substreamid) {
-                av_log(avctx, AV_LOG_WARNING, "unsupported frame type : "
-                       "skipping frame\n");
+                av_log(avctx, AV_LOG_DEBUG,
+                       "unsupported frame type %d: skipping frame\n",
+                       s->frame_type);
                 *got_frame_ptr = 0;
                 return buf_size;
             } else {

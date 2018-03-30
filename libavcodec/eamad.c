@@ -41,8 +41,8 @@
 #include "mpeg12vlc.h"
 
 #define EA_PREAMBLE_SIZE    8
-#define MADk_TAG MKTAG('M', 'A', 'D', 'k')    /* MAD i-frame */
-#define MADm_TAG MKTAG('M', 'A', 'D', 'm')    /* MAD p-frame */
+#define MADk_TAG MKTAG('M', 'A', 'D', 'k')    /* MAD I-frame */
+#define MADm_TAG MKTAG('M', 'A', 'D', 'm')    /* MAD P-frame */
 #define MADe_TAG MKTAG('M', 'A', 'D', 'e')    /* MAD lqp-frame */
 
 typedef struct MadContext {
@@ -284,7 +284,7 @@ static int decode_frame(AVCodecContext *avctx,
 
     if (avctx->width != width || avctx->height != height) {
         av_frame_unref(s->last_frame);
-        if((width * (int64_t)height)/2048*7 > bytestream2_get_bytes_left(&gb))
+        if((width * height)/2048*7 > bytestream2_get_bytes_left(&gb))
             return AVERROR_INVALIDDATA;
         if ((ret = ff_set_dimensions(avctx, width, height)) < 0)
             return ret;

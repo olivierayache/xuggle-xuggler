@@ -37,7 +37,7 @@ static int ffm_is_avail_data(AVFormatContext *s, int size)
 {
     FFMContext *ffm = s->priv_data;
     int64_t pos, avail_size;
-    int len;
+    ptrdiff_t len;
 
     len = ffm->packet_end - ffm->packet_ptr;
     if (size <= len)
@@ -50,7 +50,10 @@ static int ffm_is_avail_data(AVFormatContext *s, int size)
     } else {
     if (pos == ffm->write_index) {
         /* exactly at the end of stream */
-        return AVERROR(EAGAIN);
+        if (ffm->server_attached)
+            return AVERROR(EAGAIN);
+        else
+            return AVERROR_INVALIDDATA;
     } else if (pos < ffm->write_index) {
         avail_size = ffm->write_index - pos;
     } else {
@@ -60,11 +63,13 @@ static int ffm_is_avail_data(AVFormatContext *s, int size)
     avail_size = (avail_size / ffm->packet_size) * (ffm->packet_size - FFM_HEADER_SIZE) + len;
     if (size <= avail_size)
         return 1;
-    else
+    else if (ffm->server_attached)
         return AVERROR(EAGAIN);
+    else
+        return AVERROR_INVALIDDATA;
 }
 
-static int ffm_resync(AVFormatContext *s, int state)
+static int ffm_resync(AVFormatContext *s, uint32_t state)
 {
     av_log(s, AV_LOG_ERROR, "resyncing\n");
     while (state != PACKET_ID) {
@@ -83,7 +88,9 @@ static int ffm_read_data(AVFormatContext *s,
 {
     FFMContext *ffm = s->priv_data;
     AVIOContext *pb = s->pb;
-    int len, fill_size, size1, frame_offset, id;
+    int fill_size, size1, frame_offset;
+    uint32_t id;
+    ptrdiff_t len;
     int64_t last_pos = -1;
 
     size1 = size;
@@ -95,8 +102,12 @@ static int ffm_read_data(AVFormatContext *s,
         if (len > size)
             len = size;
         if (len == 0) {
-            if (avio_tell(pb) == ffm->file_size)
-                avio_seek(pb, ffm->packet_size, SEEK_SET);
+            if (avio_tell(pb) == ffm->file_size) {
+                if (ffm->server_attached) {
+                    avio_seek(pb, ffm->packet_size, SEEK_SET);
+                } else
+                    return AVERROR_EOF;
+            }
     retry_read:
             if (pb->buffer_size != ffm->packet_size) {
                 int64_t tell = avio_tell(pb);
@@ -273,7 +284,7 @@ static int ffm2_read_header(AVFormatContext *s)
     AVIOContext *pb = s->pb;
     AVCodecContext *codec;
     const AVCodecDescriptor *codec_desc;
-    int ret;
+    int ret, i;
     int f_main = 0, f_cprv = -1, f_stvi = -1, f_stau = -1;
     AVCodec *enc;
     char *buffer;
@@ -346,12 +357,16 @@ static int ffm2_read_header(AVFormatContext *s)
             codec->flags2 = avio_rb32(pb);
             codec->debug = avio_rb32(pb);
             if (codec->flags & AV_CODEC_FLAG_GLOBAL_HEADER) {
-                if (ff_get_extradata(codec, pb, avio_rb32(pb)) < 0)
+                int size = avio_rb32(pb);
+                codec->extradata = av_mallocz(size + AV_INPUT_BUFFER_PADDING_SIZE);
+                if (!codec->extradata)
                     return AVERROR(ENOMEM);
+                codec->extradata_size = size;
+                avio_read(pb, codec->extradata, size);
             }
             break;
         case MKBETAG('S', 'T', 'V', 'I'):
-            if (f_stvi++ || codec->codec_type != AVMEDIA_TYPE_VIDEO) {
+            if (f_stvi++) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -412,7 +427,7 @@ static int ffm2_read_header(AVFormatContext *s)
             codec->refs = avio_rb32(pb);
             break;
         case MKBETAG('S', 'T', 'A', 'U'):
-            if (f_stau++ || codec->codec_type != AVMEDIA_TYPE_AUDIO) {
+            if (f_stau++) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -438,7 +453,7 @@ static int ffm2_read_header(AVFormatContext *s)
             }
             break;
         case MKBETAG('S', '2', 'V', 'I'):
-            if (f_stvi++ || !size || codec->codec_type != AVMEDIA_TYPE_VIDEO) {
+            if (f_stvi++ || !size) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -453,7 +468,7 @@ static int ffm2_read_header(AVFormatContext *s)
                 goto fail;
             break;
         case MKBETAG('S', '2', 'A', 'U'):
-            if (f_stau++ || !size || codec->codec_type != AVMEDIA_TYPE_AUDIO) {
+            if (f_stau++ || !size) {
                 ret = AVERROR(EINVAL);
                 goto fail;
             }
@@ -470,6 +485,9 @@ static int ffm2_read_header(AVFormatContext *s)
         }
         avio_seek(pb, next, SEEK_SET);
     }
+
+    for (i = 0; i < s->nb_streams; i++)
+        avcodec_parameters_from_context(s->streams[i]->codecpar, s->streams[i]->codec);
 
     /* get until end of block reached */
     while ((avio_tell(pb) % ffm->packet_size) != 0 && !pb->eof_reached)
@@ -617,9 +635,15 @@ static int ffm_read_header(AVFormatContext *s)
             goto fail;
         }
         if (codec->flags & AV_CODEC_FLAG_GLOBAL_HEADER) {
-            if (ff_get_extradata(codec, pb, avio_rb32(pb)) < 0)
+            int size = avio_rb32(pb);
+            codec->extradata = av_mallocz(size + AV_INPUT_BUFFER_PADDING_SIZE);
+            if (!codec->extradata)
                 return AVERROR(ENOMEM);
+            codec->extradata_size = size;
+            avio_read(pb, codec->extradata, size);
         }
+
+        avcodec_parameters_from_context(st->codecpar, codec);
     }
 
     /* get until end of block reached */
@@ -674,7 +698,7 @@ static int ffm_read_packet(AVFormatContext *s, AVPacket *pkt)
         pkt->stream_index = ffm->header[0];
         if ((unsigned)pkt->stream_index >= s->nb_streams) {
             av_log(s, AV_LOG_ERROR, "invalid stream index %d\n", pkt->stream_index);
-            av_free_packet(pkt);
+            av_packet_unref(pkt);
             ffm->read_state = READ_HEADER;
             return -1;
         }
@@ -685,7 +709,7 @@ static int ffm_read_packet(AVFormatContext *s, AVPacket *pkt)
         ffm->read_state = READ_HEADER;
         if (ffm_read_data(s, pkt->data, size, 0) != size) {
             /* bad case: desynchronized packet. we cancel all the packet loading */
-            av_free_packet(pkt);
+            av_packet_unref(pkt);
             return -1;
         }
         pkt->pts = AV_RB64(ffm->header+8);
@@ -773,6 +797,19 @@ static int ffm_probe(AVProbeData *p)
     return 0;
 }
 
+static const AVOption options[] = {
+    {"server_attached", NULL, offsetof(FFMContext, server_attached), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_EXPORT },
+    {"ffm_write_index", NULL, offsetof(FFMContext, write_index), AV_OPT_TYPE_INT64, {.i64 = 0}, 0, INT64_MAX, AV_OPT_FLAG_EXPORT },
+    {"ffm_file_size", NULL, offsetof(FFMContext, file_size), AV_OPT_TYPE_INT64, {.i64 = 0}, 0, INT64_MAX, AV_OPT_FLAG_EXPORT },
+    { NULL },
+};
+
+static const AVClass ffm_class = {
+    .class_name = "ffm demuxer",
+    .item_name  = av_default_item_name,
+    .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
+};
 AVInputFormat ff_ffm_demuxer = {
     .name           = "ffm",
     .long_name      = NULL_IF_CONFIG_SMALL("FFM (FFserver live feed)"),
@@ -782,4 +819,5 @@ AVInputFormat ff_ffm_demuxer = {
     .read_packet    = ffm_read_packet,
     .read_close     = ffm_close,
     .read_seek      = ffm_seek,
+    .priv_class     = &ffm_class,
 };

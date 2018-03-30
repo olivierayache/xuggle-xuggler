@@ -28,7 +28,6 @@
  * Supports: PAL8 (RGB 8bpp, paletted)
  *         : BGR24 (RGB 24bpp) (can also output it as RGB32)
  *         : RGB32 (RGB 32bpp, 4th plane is alpha)
- *
  */
 
 #include <stdio.h>
@@ -120,15 +119,12 @@ static int decode_frame(AVCodecContext *avctx, void *data,
     }
 
     if (avctx->bits_per_coded_sample <= 8) {
-        int size;
         const uint8_t *pal = av_packet_get_side_data(avpkt,
                                                      AV_PKT_DATA_PALETTE,
-                                                     &size);
-        if (pal && size == AVPALETTE_SIZE) {
+                                                     NULL);
+        if (pal) {
             frame->palette_has_changed = 1;
             memcpy(c->pal, pal, AVPALETTE_SIZE);
-        } else if (pal) {
-            av_log(avctx, AV_LOG_ERROR, "Palette size %d is wrong\n", size);
         }
 
         memcpy (frame->data[1], c->pal, AVPALETTE_SIZE);

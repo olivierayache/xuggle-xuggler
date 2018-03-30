@@ -264,7 +264,7 @@ static inline int read_huff_channels(MLPDecodeContext *m, GetBitContext *gbp,
             result = (result << lsb_bits) + get_bits(gbp, lsb_bits);
 
         result  += cp->sign_huff_offset;
-        result *= 1 << quant_step_size;
+        result <<= quant_step_size;
 
         m->sample_buffer[pos + s->blockpos][channel] = result;
     }
@@ -533,19 +533,6 @@ static int read_restart_header(MLPDecodeContext *m, GetBitContext *gbp,
     s->max_channel        = max_channel;
     s->max_matrix_channel = max_matrix_channel;
 
-#if FF_API_REQUEST_CHANNELS
-FF_DISABLE_DEPRECATION_WARNINGS
-    if (m->avctx->request_channels > 0 &&
-        m->avctx->request_channels <= s->max_channel + 1 &&
-        m->max_decoded_substream > substr) {
-        av_log(m->avctx, AV_LOG_DEBUG,
-               "Extracting %d-channel downmix from substream %d. "
-               "Further substreams will be skipped.\n",
-               s->max_channel + 1, substr);
-        m->max_decoded_substream = substr;
-FF_ENABLE_DEPRECATION_WARNINGS
-    } else
-#endif
     if (m->avctx->request_channel_layout && (s->ch_layout & m->avctx->request_channel_layout) ==
         m->avctx->request_channel_layout && m->max_decoded_substream > substr) {
         av_log(m->avctx, AV_LOG_DEBUG,
@@ -615,7 +602,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         /* Default audio coding is 24-bit raw PCM. */
         cp->huff_offset      = 0;
-        cp->sign_huff_offset = (-1) << 23;
+        cp->sign_huff_offset = -(1 << 23);
         cp->codebook         = 0;
         cp->huff_lsbs        = 24;
     }
@@ -697,7 +684,7 @@ static int read_filter_params(MLPDecodeContext *m, GetBitContext *gbp,
         }
 
         for (i = 0; i < order; i++)
-            fcoeff[i] = get_sbits(gbp, coeff_bits) * (1 << coeff_shift);
+            fcoeff[i] = get_sbits(gbp, coeff_bits) << coeff_shift;
 
         if (get_bits1(gbp)) {
             int state_bits, state_shift;
@@ -714,7 +701,7 @@ static int read_filter_params(MLPDecodeContext *m, GetBitContext *gbp,
             /* TODO: Check validity of state data. */
 
             for (i = 0; i < order; i++)
-                fp->state[i] = state_bits ? get_sbits(gbp, state_bits) * (1 << state_shift) : 0;
+                fp->state[i] = state_bits ? get_sbits(gbp, state_bits) << state_shift : 0;
         }
     }
 
@@ -742,7 +729,7 @@ static int read_matrix_params(MLPDecodeContext *m, unsigned int substr, GetBitCo
         av_log(m->avctx, AV_LOG_ERROR,
                "Number of primitive matrices cannot be greater than %d.\n",
                max_primitive_matrices);
-        goto error;
+        return AVERROR_INVALIDDATA;
     }
 
     for (mat = 0; mat < s->num_primitive_matrices; mat++) {
@@ -755,12 +742,12 @@ static int read_matrix_params(MLPDecodeContext *m, unsigned int substr, GetBitCo
             av_log(m->avctx, AV_LOG_ERROR,
                     "Invalid channel %d specified as output from matrix.\n",
                     s->matrix_out_ch[mat]);
-            goto error;
+            return AVERROR_INVALIDDATA;
         }
         if (frac_bits > 14) {
             av_log(m->avctx, AV_LOG_ERROR,
                     "Too many fractional bits specified.\n");
-            goto error;
+            return AVERROR_INVALIDDATA;
         }
 
         max_chan = s->max_matrix_channel;
@@ -772,7 +759,7 @@ static int read_matrix_params(MLPDecodeContext *m, unsigned int substr, GetBitCo
             if (get_bits1(gbp))
                 coeff_val = get_sbits(gbp, frac_bits + 2);
 
-            s->matrix_coeff[mat][ch] = coeff_val * (1 << (14 - frac_bits));
+            s->matrix_coeff[mat][ch] = coeff_val << (14 - frac_bits);
         }
 
         if (s->noise_type)
@@ -782,11 +769,6 @@ static int read_matrix_params(MLPDecodeContext *m, unsigned int substr, GetBitCo
     }
 
     return 0;
-error:
-    s->num_primitive_matrices = 0;
-    memset(s->matrix_out_ch, 0, sizeof(s->matrix_out_ch));
-
-    return AVERROR_INVALIDDATA;
 }
 
 /** Read channel parameters. */
@@ -1017,8 +999,8 @@ static void generate_2_noise_channels(MLPDecodeContext *m, unsigned int substr)
 
     for (i = 0; i < s->blockpos; i++) {
         uint16_t seed_shr7 = seed >> 7;
-        m->sample_buffer[i][maxchan+1] = ((int8_t)(seed >> 15)) * (1 << s->noise_shift);
-        m->sample_buffer[i][maxchan+2] = ((int8_t) seed_shr7)   * (1 << s->noise_shift);
+        m->sample_buffer[i][maxchan+1] = ((int8_t)(seed >> 15)) << s->noise_shift;
+        m->sample_buffer[i][maxchan+2] = ((int8_t) seed_shr7)   << s->noise_shift;
 
         seed = (seed << 16) ^ seed_shr7 ^ (seed_shr7 << 5);
     }
@@ -1178,11 +1160,6 @@ static int read_access_unit(AVCodecContext *avctx, void* data,
             }
             skip_bits(&gb, 16);
             substr_header_size += 2;
-        }
-
-        if (length < header_size + substr_header_size) {
-            av_log(m->avctx, AV_LOG_ERROR, "Insuffient data for headers\n");
-            goto error;
         }
 
         if (!(nonrestart_substr ^ m->is_major_sync_unit)) {

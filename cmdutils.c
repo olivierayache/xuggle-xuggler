@@ -52,6 +52,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/cpu.h"
 #include "libavutil/ffversion.h"
+#include "libavutil/version.h"
 #include "cmdutils.h"
 #if CONFIG_NETWORK
 #include "libavformat/network.h"
@@ -59,9 +60,6 @@
 #if HAVE_SYS_RESOURCE_H
 #include <sys/time.h>
 #include <sys/resource.h>
-#endif
-#if HAVE_SETDLLDIRECTORY
-#include <windows.h>
 #endif
 
 static int init_report(const char *env);
@@ -107,15 +105,6 @@ static void log_callback_report(void *ptr, int level, const char *fmt, va_list v
         fputs(line, report_file);
         fflush(report_file);
     }
-}
-
-void init_dynload(void)
-{
-#if HAVE_SETDLLDIRECTORY
-    /* Calling SetDllDirectory with the empty string (but not NULL) removes the
-     * current working directory from the DLL search path as a security pre-caution. */
-    SetDllDirectory("");
-#endif
 }
 
 static void (*program_exit)(int ret);
@@ -545,7 +534,12 @@ int opt_default(void *optctx, const char *opt, const char *arg)
 #if CONFIG_AVRESAMPLE
     const AVClass *rc = avresample_get_class();
 #endif
-    const AVClass *sc, *swr_class;
+#if CONFIG_SWSCALE
+    const AVClass *sc = sws_get_class();
+#endif
+#if CONFIG_SWRESAMPLE
+    const AVClass *swr_class = swr_get_class();
+#endif
 
     if (!strcmp(opt, "debug") || !strcmp(opt, "fdebug"))
         av_log_set_level(AV_LOG_DEBUG);
@@ -569,7 +563,6 @@ int opt_default(void *optctx, const char *opt, const char *arg)
         consumed = 1;
     }
 #if CONFIG_SWSCALE
-    sc = sws_get_class();
     if (!consumed && (o = opt_find(&sc, opt, NULL, 0,
                          AV_OPT_SEARCH_CHILDREN | AV_OPT_SEARCH_FAKE_OBJ))) {
         struct SwsContext *sws = sws_alloc_context();
@@ -597,7 +590,6 @@ int opt_default(void *optctx, const char *opt, const char *arg)
     }
 #endif
 #if CONFIG_SWRESAMPLE
-    swr_class = swr_get_class();
     if (!consumed && (o=opt_find(&swr_class, opt, NULL, 0,
                                     AV_OPT_SEARCH_CHILDREN | AV_OPT_SEARCH_FAKE_OBJ))) {
         struct SwrContext *swr = swr_alloc();
@@ -1067,7 +1059,8 @@ static int warned_cfg = 0;
                    LIB##LIBNAME##_VERSION_MAJOR,                        \
                    LIB##LIBNAME##_VERSION_MINOR,                        \
                    LIB##LIBNAME##_VERSION_MICRO,                        \
-                   version >> 16, version >> 8 & 0xff, version & 0xff); \
+                   AV_VERSION_MAJOR(version), AV_VERSION_MINOR(version),\
+                   AV_VERSION_MICRO(version));                          \
         }                                                               \
         if (flags & SHOW_CONFIG) {                                      \
             const char *cfg = libname##_configuration();                \
@@ -1086,15 +1079,15 @@ static int warned_cfg = 0;
 
 static void print_all_libs_info(int flags, int level)
 {
-    PRINT_LIB_INFO(avutil,   AVUTIL,   flags, level);
-    PRINT_LIB_INFO(avcodec,  AVCODEC,  flags, level);
-    PRINT_LIB_INFO(avformat, AVFORMAT, flags, level);
-    PRINT_LIB_INFO(avdevice, AVDEVICE, flags, level);
-    PRINT_LIB_INFO(avfilter, AVFILTER, flags, level);
+    PRINT_LIB_INFO(avutil,     AVUTIL,     flags, level);
+    PRINT_LIB_INFO(avcodec,    AVCODEC,    flags, level);
+    PRINT_LIB_INFO(avformat,   AVFORMAT,   flags, level);
+    PRINT_LIB_INFO(avdevice,   AVDEVICE,   flags, level);
+    PRINT_LIB_INFO(avfilter,   AVFILTER,   flags, level);
     PRINT_LIB_INFO(avresample, AVRESAMPLE, flags, level);
-    PRINT_LIB_INFO(swscale,  SWSCALE,  flags, level);
-    PRINT_LIB_INFO(swresample,SWRESAMPLE,  flags, level);
-    PRINT_LIB_INFO(postproc, POSTPROC, flags, level);
+    PRINT_LIB_INFO(swscale,    SWSCALE,    flags, level);
+    PRINT_LIB_INFO(swresample, SWRESAMPLE, flags, level);
+    PRINT_LIB_INFO(postproc,   POSTPROC,   flags, level);
 }
 
 static void print_program_info(int flags, int level)
@@ -1331,16 +1324,47 @@ static void print_codec(const AVCodec *c)
     printf("%s %s [%s]:\n", encoder ? "Encoder" : "Decoder", c->name,
            c->long_name ? c->long_name : "");
 
+    printf("    General capabilities: ");
+    if (c->capabilities & AV_CODEC_CAP_DRAW_HORIZ_BAND)
+        printf("horizband ");
+    if (c->capabilities & AV_CODEC_CAP_DR1)
+        printf("dr1 ");
+    if (c->capabilities & AV_CODEC_CAP_TRUNCATED)
+        printf("trunc ");
+    if (c->capabilities & AV_CODEC_CAP_DELAY)
+        printf("delay ");
+    if (c->capabilities & AV_CODEC_CAP_SMALL_LAST_FRAME)
+        printf("small ");
+    if (c->capabilities & AV_CODEC_CAP_SUBFRAMES)
+        printf("subframes ");
+    if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
+        printf("exp ");
+    if (c->capabilities & AV_CODEC_CAP_CHANNEL_CONF)
+        printf("chconf ");
+    if (c->capabilities & AV_CODEC_CAP_PARAM_CHANGE)
+        printf("paramchange ");
+    if (c->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
+        printf("variable ");
+    if (c->capabilities & (AV_CODEC_CAP_FRAME_THREADS |
+                           AV_CODEC_CAP_SLICE_THREADS |
+                           AV_CODEC_CAP_AUTO_THREADS))
+        printf("threads ");
+    if (!c->capabilities)
+        printf("none");
+    printf("\n");
+
     if (c->type == AVMEDIA_TYPE_VIDEO ||
         c->type == AVMEDIA_TYPE_AUDIO) {
         printf("    Threading capabilities: ");
         switch (c->capabilities & (AV_CODEC_CAP_FRAME_THREADS |
-                                   AV_CODEC_CAP_SLICE_THREADS)) {
+                                   AV_CODEC_CAP_SLICE_THREADS |
+                                   AV_CODEC_CAP_AUTO_THREADS)) {
         case AV_CODEC_CAP_FRAME_THREADS |
              AV_CODEC_CAP_SLICE_THREADS: printf("frame and slice"); break;
         case AV_CODEC_CAP_FRAME_THREADS: printf("frame");           break;
         case AV_CODEC_CAP_SLICE_THREADS: printf("slice");           break;
-        default:                      printf("no");              break;
+        case AV_CODEC_CAP_AUTO_THREADS : printf("auto");            break;
+        default:                         printf("none");            break;
         }
         printf("\n");
     }
@@ -1399,7 +1423,7 @@ static int compare_codec_desc(const void *a, const void *b)
     const AVCodecDescriptor * const *da = a;
     const AVCodecDescriptor * const *db = b;
 
-    return (*da)->type != (*db)->type ? (*da)->type - (*db)->type :
+    return (*da)->type != (*db)->type ? FFDIFFSIGN((*da)->type, (*db)->type) :
            strcmp((*da)->name, (*db)->name);
 }
 
@@ -1601,7 +1625,7 @@ int show_filters(void *optctx, const char *opt, const char *arg)
                                   ( i && (filter->flags & AVFILTER_FLAG_DYNAMIC_OUTPUTS))) ? 'N' : '|';
         }
         *descr_cur = 0;
-        printf(" %c%c%c %-16s %-10s %s\n",
+        printf(" %c%c%c %-17s %-10s %s\n",
                filter->flags & AVFILTER_FLAG_SUPPORT_TIMELINE ? 'T' : '.',
                filter->flags & AVFILTER_FLAG_SLICE_THREADS    ? 'S' : '.',
                filter->process_command                        ? 'C' : '.',
@@ -2075,7 +2099,7 @@ static int print_device_sources(AVInputFormat *fmt, AVDictionary *opts)
     if (!fmt || !fmt->priv_class  || !AV_IS_INPUT_DEVICE(fmt->priv_class->category))
         return AVERROR(EINVAL);
 
-    printf("Auto-detected sources for %s:\n", fmt->name);
+    printf("Audo-detected sources for %s:\n", fmt->name);
     if (!fmt->get_device_list) {
         ret = AVERROR(ENOSYS);
         printf("Cannot list sources. Not implemented.\n");
@@ -2105,7 +2129,7 @@ static int print_device_sinks(AVOutputFormat *fmt, AVDictionary *opts)
     if (!fmt || !fmt->priv_class  || !AV_IS_OUTPUT_DEVICE(fmt->priv_class->category))
         return AVERROR(EINVAL);
 
-    printf("Auto-detected sinks for %s:\n", fmt->name);
+    printf("Audo-detected sinks for %s:\n", fmt->name);
     if (!fmt->get_device_list) {
         ret = AVERROR(ENOSYS);
         printf("Cannot list sinks. Not implemented.\n");
