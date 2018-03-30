@@ -342,9 +342,9 @@ static int read_header(AVFormatContext *avctx)
         return ret;
 
     /* scan secondary files */
-    if (strlen(avctx->url) > 2) {
+    if (strlen(avctx->filename) > 2) {
         int i;
-        char *filename = av_strdup(avctx->url);
+        char *filename = av_strdup(avctx->filename);
 
         if (!filename)
             return AVERROR(ENOMEM);

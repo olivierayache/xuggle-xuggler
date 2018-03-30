@@ -26,7 +26,6 @@
  * @author Marco Gerards <marco@gnu.org>, David Conrad, Jordi Ortiz <nenjordi@gmail.com>
  */
 
-#include "libavutil/pixdesc.h"
 #include "libavutil/thread.h"
 #include "avcodec.h"
 #include "get_bits.h"
@@ -1399,8 +1398,8 @@ static void global_mv(DiracContext *s, DiracBlock *block, int x, int y, int ref)
     int *c      = s->globalmc[ref].perspective;
 
     int m       = (1<<ep) - (c[0]*x + c[1]*y);
-    int64_t mx  = m * (int64_t)((A[0][0] * x + A[0][1]*y) + (1<<ez) * b[0]);
-    int64_t my  = m * (int64_t)((A[1][0] * x + A[1][1]*y) + (1<<ez) * b[1]);
+    int mx      = m * ((A[0][0] * x + A[0][1]*y) + (1<<ez) * b[0]);
+    int my      = m * ((A[1][0] * x + A[1][1]*y) + (1<<ez) * b[1]);
 
     block->u.mv[ref][0] = (mx + (1<<(ez+ep))) >> (ez+ep);
     block->u.mv[ref][1] = (my + (1<<(ez+ep))) >> (ez+ep);
@@ -1437,8 +1436,8 @@ static void decode_block_params(DiracContext *s, DiracArith arith[8], DiracBlock
                 global_mv(s, block, x, y, i);
             } else {
                 pred_mv(block, stride, x, y, i);
-                block->u.mv[i][0] += (unsigned)dirac_get_arith_int(arith + 4 + 2 * i, CTX_MV_F1, CTX_MV_DATA);
-                block->u.mv[i][1] += (unsigned)dirac_get_arith_int(arith + 5 + 2 * i, CTX_MV_F1, CTX_MV_DATA);
+                block->u.mv[i][0] += dirac_get_arith_int(arith + 4 + 2 * i, CTX_MV_F1, CTX_MV_DATA);
+                block->u.mv[i][1] += dirac_get_arith_int(arith + 5 + 2 * i, CTX_MV_F1, CTX_MV_DATA);
             }
         }
 }
@@ -1928,10 +1927,7 @@ static int get_buffer_with_edge(AVCodecContext *avctx, AVFrame *f, int flags)
 {
     int ret, i;
     int chroma_x_shift, chroma_y_shift;
-    ret = av_pix_fmt_get_chroma_sub_sample(avctx->pix_fmt, &chroma_x_shift,
-                                           &chroma_y_shift);
-    if (ret < 0)
-        return ret;
+    avcodec_get_chroma_sub_sample(avctx->pix_fmt, &chroma_x_shift, &chroma_y_shift);
 
     f->width  = avctx->width  + 2 * EDGE_WIDTH;
     f->height = avctx->height + 2 * EDGE_WIDTH + 2;
@@ -2130,11 +2126,7 @@ static int dirac_decode_data_unit(AVCodecContext *avctx, const uint8_t *buf, int
 
         s->pshift = s->bit_depth > 8;
 
-        ret = av_pix_fmt_get_chroma_sub_sample(avctx->pix_fmt,
-                                               &s->chroma_x_shift,
-                                               &s->chroma_y_shift);
-        if (ret < 0)
-            return ret;
+        avcodec_get_chroma_sub_sample(avctx->pix_fmt, &s->chroma_x_shift, &s->chroma_y_shift);
 
         ret = alloc_sequence_buffers(s);
         if (ret < 0)

@@ -43,9 +43,6 @@
 #define ACE_VO_TYPE             12
 #define ADV_SIMPLE_VO_TYPE      17
 
-#define VOT_VIDEO_ID 1
-#define VOT_STILL_TEXTURE_ID 2
-
 // aspect_ratio_info
 #define EXTENDED_PAR 15
 
@@ -239,12 +236,12 @@ static inline int ff_mpeg4_pred_dc(MpegEncContext *s, int n, int level,
             if (level < 0) {
                 av_log(s->avctx, AV_LOG_ERROR,
                        "dc<0 at %dx%d\n", s->mb_x, s->mb_y);
-                return AVERROR_INVALIDDATA;
+                return -1;
             }
             if (level > 2048 + scale) {
                 av_log(s->avctx, AV_LOG_ERROR,
                        "dc overflow at %dx%d\n", s->mb_x, s->mb_y);
-                return AVERROR_INVALIDDATA;
+                return -1;
             }
         }
         if (level < 0)

@@ -35,8 +35,6 @@
 #include "bintext.h"
 #include "internal.h"
 
-#define FONT_WIDTH 8
-
 typedef struct XbinContext {
     AVFrame *frame;
     int palette[16];
@@ -93,9 +91,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
             break;
         }
     }
-    if (avctx->width < FONT_WIDTH || avctx->height < s->font_height)
-        return AVERROR_INVALIDDATA;
-
 
     s->frame = av_frame_alloc();
     if (!s->frame)
@@ -117,6 +112,8 @@ av_unused static void hscroll(AVCodecContext *avctx)
             DEFAULT_BG_COLOR, s->font_height * s->frame->linesize[0]);
     }
 }
+
+#define FONT_WIDTH 8
 
 /**
  * Draw character to screen
