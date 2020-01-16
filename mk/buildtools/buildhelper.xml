@@ -104,7 +104,7 @@
   </condition>
 
   <property name="ivy.lib.dir" value="${build.dir}/lib"/>
-  <property name="ivy.version" value="ivy-2.2.0" />
+  <property name="ivy.version" value="ivy-2.5.0" />
   <property name="ivy.retrieve.pattern" value="${ivy.lib.dir}/[conf]/[artifact].[ext]" />
   <property name="ivy.distrib.dir" value="${dist.dir}"/>
   <!-- You can set the variable XUGGLE_REPO in which case ivy will publish
@@ -872,7 +872,7 @@
       <!-- This line makes sure that Java looks in the build dir for the
         shared library.  -->
       <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
-      <jvmarg value="-Xcheck:jni"/>
+      <!--<jvmarg value="-Xcheck:jni"/>-->
       <jvmarg value="${build.headless.setting}"/>
       <jvmarg line="${test.jvm.properties}"/>
       <!--
@@ -1190,6 +1190,7 @@
     <exec executable="${build.native.make}"
         dir="${build-native.dir}"
         failonerror="true">
+        <arg value="-j6"/>
       <arg line="all"/>
     </exec>
   </target>
@@ -1284,7 +1285,7 @@
     <mkdir dir="${classes.dir}${app.nativeclasspath}/${xuggle.os}" />
     <copy todir="${classes.dir}${app.nativeclasspath}/${xuggle.os}" verbose="true">
        <fileset dir="${dist.unix.dir}/stage/${xuggle.os}${xuggle.dir}/lib">
-          <include name="*.so" />
+          <include name="*.so.${library.version.major}" />
           <exclude name="*.*.*" />
        </fileset>
        <fileset dir="${dist.unix.dir}/stage/${xuggle.os}${xuggle.dir}/lib">
