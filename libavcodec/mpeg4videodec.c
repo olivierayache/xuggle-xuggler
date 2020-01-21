@@ -392,7 +392,7 @@ static int mpeg4_decode_sprite_trajectory(Mpeg4DecContext *ctx, GetBitContext *g
                 llabs(sprite_offset[0][i] + sprite_delta[i][1] * (h+16LL)) >= INT_MAX ||
                 llabs(sprite_offset[0][i] + sprite_delta[i][0] * (w+16LL) + sprite_delta[i][1] * (h+16LL)) >= INT_MAX ||
                 llabs(sprite_delta[i][0] * (w+16LL)) >= INT_MAX ||
-                llabs(sprite_delta[i][1] * (w+16LL)) >= INT_MAX ||
+                llabs(sprite_delta[i][1] * (h+16LL)) >= INT_MAX ||
                 llabs(sd[0]) >= INT_MAX ||
                 llabs(sd[1]) >= INT_MAX ||
                 llabs(sprite_offset[0][i] + sd[0] * (w+16LL)) >= INT_MAX ||
@@ -539,7 +539,7 @@ static inline int get_amv(Mpeg4DecContext *ctx, int n)
         len >>= s->quarter_sample;
 
     if (s->real_sprite_warping_points == 1) {
-        if (ctx->divx_version == 500 && ctx->divx_build == 413)
+        if (ctx->divx_version == 500 && ctx->divx_build == 413 && a >= s->quarter_sample)
             sum = s->sprite_offset[0][n] / (1 << (a - s->quarter_sample));
         else
             sum = RSHIFT(s->sprite_offset[0][n] * (1 << s->quarter_sample), a);

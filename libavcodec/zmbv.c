@@ -408,6 +408,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
     int zret = Z_OK; // Zlib return code
     int len = buf_size;
     int hi_ver, lo_ver, ret;
+    int expected_size;
 
     /* parse header */
     if (len < 1)
@@ -504,14 +505,19 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
         memset(c->prev, 0, avctx->width * avctx->height * (c->bpp / 8));
         c->decode_intra= decode_intra;
     }
+    if (c->flags & ZMBV_KEYFRAME) {
+        expected_size = avctx->width * avctx->height * (c->bpp / 8);
+    } else {
+        expected_size = (c->bx * c->by * 2 + 3) & ~3;
+    }
+    if (avctx->pix_fmt == AV_PIX_FMT_PAL8 &&
+        (c->flags & (ZMBV_DELTAPAL | ZMBV_KEYFRAME)))
+        expected_size += 768;
 
     if (!c->decode_intra) {
         av_log(avctx, AV_LOG_ERROR, "Error! Got no format or no keyframe!\n");
         return AVERROR_INVALIDDATA;
     }
-
-    if ((ret = ff_get_buffer(avctx, frame, 0)) < 0)
-        return ret;
 
     if (c->comp == 0) { // uncompressed data
         if (c->decomp_size < len) {
@@ -519,6 +525,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
             return AVERROR_INVALIDDATA;
         }
         memcpy(c->decomp_buf, buf, len);
+        c->decomp_len = len;
     } else { // ZLIB-compressed data
         c->zstream.total_in = c->zstream.total_out = 0;
         c->zstream.next_in = (uint8_t*)buf;
@@ -532,6 +539,14 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
         }
         c->decomp_len = c->zstream.total_out;
     }
+    if (expected_size > c->decomp_len ||
+        (c->flags & ZMBV_KEYFRAME) && expected_size < c->decomp_len) {
+        av_log(avctx, AV_LOG_ERROR, "decompressed size %d is incorrect, expected %d\n", c->decomp_len, expected_size);
+        return AVERROR_INVALIDDATA;
+    }
+    if ((ret = ff_get_buffer(avctx, frame, 0)) < 0)
+        return ret;
+
     if (c->flags & ZMBV_KEYFRAME) {
         frame->key_frame = 1;
         frame->pict_type = AV_PICTURE_TYPE_I;

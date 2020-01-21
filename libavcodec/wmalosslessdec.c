@@ -184,8 +184,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     unsigned int channel_mask;
     int i, log2_max_num_subframes;
 
-    if (!avctx->block_align) {
-        av_log(avctx, AV_LOG_ERROR, "block_align is not set\n");
+    if (avctx->block_align <= 0) {
+        av_log(avctx, AV_LOG_ERROR, "block_align is not set or invalid\n");
         return AVERROR(EINVAL);
     }
 
@@ -766,7 +766,7 @@ static void revert_cdlms ## bits (WmallDecodeCtx *s, int ch, \
     for (ilms = num_lms - 1; ilms >= 0; ilms--) { \
         for (icoef = coef_begin; icoef < coef_end; icoef++) { \
             int##bits##_t *prevvalues = (int##bits##_t *)s->cdlms[ch][ilms].lms_prevvalues; \
-            pred = 1 << (s->cdlms[ch][ilms].scaling - 1); \
+            pred = (1 << s->cdlms[ch][ilms].scaling) >> 1; \
             residue = s->channel_residues[ch][icoef]; \
             pred += s->dsp.scalarproduct_and_madd_int## bits (s->cdlms[ch][ilms].coefs, \
                                                         prevvalues + s->cdlms[ch][ilms].recent, \
@@ -987,9 +987,9 @@ static int decode_subframe(WmallDecodeCtx *s)
 
         for (j = 0; j < subframe_len; j++) {
             if (s->bits_per_sample == 16) {
-                *s->samples_16[c]++ = (int16_t) s->channel_residues[c][j] << padding_zeroes;
+                *s->samples_16[c]++ = (int16_t) s->channel_residues[c][j] * (1 << padding_zeroes);
             } else {
-                *s->samples_32[c]++ = s->channel_residues[c][j] << (padding_zeroes + 8);
+                *s->samples_32[c]++ = s->channel_residues[c][j] * (256 << padding_zeroes);
             }
         }
     }
@@ -1148,6 +1148,7 @@ static void save_bits(WmallDecodeCtx *s, GetBitContext* gb, int len,
     if (len <= 0 || buflen > s->max_frame_size) {
         avpriv_request_sample(s->avctx, "Too small input buffer");
         s->packet_loss = 1;
+        s->num_saved_bits = 0;
         return;
     }
 
@@ -1255,7 +1256,9 @@ static int decode_packet(AVCodecContext *avctx, void *data, int *got_frame_ptr,
             (frame_size = show_bits(gb, s->log2_frame_size)) &&
             frame_size <= remaining_bits(s, gb)) {
             save_bits(s, gb, frame_size, 0);
-            s->packet_done = !decode_frame(s);
+
+            if (!s->packet_loss)
+                s->packet_done = !decode_frame(s);
         } else if (!s->len_prefix
                    && s->num_saved_bits > get_bits_count(&s->gb)) {
             /* when the frames do not have a length prefix, we don't know the

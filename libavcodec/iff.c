@@ -111,23 +111,23 @@ static const uint64_t plane8_lut[8][256] = {
     LUT8(4), LUT8(5), LUT8(6), LUT8(7),
 };
 
-#define LUT32(plane) {                                \
-             0,          0,          0,          0,   \
-             0,          0,          0, 1 << plane,   \
-             0,          0, 1 << plane,          0,   \
-             0,          0, 1 << plane, 1 << plane,   \
-             0, 1 << plane,          0,          0,   \
-             0, 1 << plane,          0, 1 << plane,   \
-             0, 1 << plane, 1 << plane,          0,   \
-             0, 1 << plane, 1 << plane, 1 << plane,   \
-    1 << plane,          0,          0,          0,   \
-    1 << plane,          0,          0, 1 << plane,   \
-    1 << plane,          0, 1 << plane,          0,   \
-    1 << plane,          0, 1 << plane, 1 << plane,   \
-    1 << plane, 1 << plane,          0,          0,   \
-    1 << plane, 1 << plane,          0, 1 << plane,   \
-    1 << plane, 1 << plane, 1 << plane,          0,   \
-    1 << plane, 1 << plane, 1 << plane, 1 << plane,   \
+#define LUT32(plane) {                                    \
+              0,           0,           0,           0,   \
+              0,           0,           0, 1U << plane,   \
+              0,           0, 1U << plane,           0,   \
+              0,           0, 1U << plane, 1U << plane,   \
+              0, 1U << plane,           0,           0,   \
+              0, 1U << plane,           0, 1U << plane,   \
+              0, 1U << plane, 1U << plane,           0,   \
+              0, 1U << plane, 1U << plane, 1U << plane,   \
+    1U << plane,           0,           0,           0,   \
+    1U << plane,           0,           0, 1U << plane,   \
+    1U << plane,           0, 1U << plane,           0,   \
+    1U << plane,           0, 1U << plane, 1U << plane,   \
+    1U << plane, 1U << plane,           0,           0,   \
+    1U << plane, 1U << plane,           0, 1U << plane,   \
+    1U << plane, 1U << plane, 1U << plane,           0,   \
+    1U << plane, 1U << plane, 1U << plane, 1U << plane,   \
 }
 
 // 32 planes * 4-bit mask * 4 lookup tables each
@@ -180,6 +180,10 @@ static int cmap_read_palette(AVCodecContext *avctx, uint32_t *pal)
             pal[i] = 0xFF000000 | gray2rgb((i * 255) >> avctx->bits_per_coded_sample);
     }
     if (s->masking == MASK_HAS_MASK) {
+        if ((1 << avctx->bits_per_coded_sample) < count) {
+            avpriv_request_sample(avctx, "overlapping mask");
+            return AVERROR_PATCHWELCOME;
+        }
         memcpy(pal + (1 << avctx->bits_per_coded_sample), pal, count * 4);
         for (i = 0; i < count; i++)
             pal[i] &= 0xFFFFFF;
@@ -280,6 +284,16 @@ static int extract_header(AVCodecContext *const avctx,
         for (i = 0; i < 16; i++)
             s->tvdc[i] = bytestream_get_be16(&buf);
 
+        if (s->ham) {
+            if (s->bpp > 8) {
+                av_log(avctx, AV_LOG_ERROR, "Invalid number of hold bits for HAM: %u\n", s->ham);
+                return AVERROR_INVALIDDATA;
+            } if (s->ham != (s->bpp > 6 ? 6 : 4)) {
+                av_log(avctx, AV_LOG_ERROR, "Invalid number of hold bits for HAM: %u, BPP: %u\n", s->ham, s->bpp);
+                return AVERROR_INVALIDDATA;
+            }
+        }
+
         if (s->masking == MASK_HAS_MASK) {
             if (s->bpp >= 8 && !s->ham) {
                 avctx->pix_fmt = AV_PIX_FMT_RGB32;
@@ -306,9 +320,6 @@ static int extract_header(AVCodecContext *const avctx,
         }
         if (!s->bpp || s->bpp > 32) {
             av_log(avctx, AV_LOG_ERROR, "Invalid number of bitplanes: %u\n", s->bpp);
-            return AVERROR_INVALIDDATA;
-        } else if (s->ham >= 8) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid number of hold bits for HAM: %u\n", s->ham);
             return AVERROR_INVALIDDATA;
         }
 
@@ -371,6 +382,8 @@ static av_cold int decode_end(AVCodecContext *avctx)
     av_freep(&s->planebuf);
     av_freep(&s->ham_buf);
     av_freep(&s->ham_palbuf);
+    av_freep(&s->mask_buf);
+    av_freep(&s->mask_palbuf);
     av_freep(&s->video[0]);
     av_freep(&s->video[1]);
     av_freep(&s->pal);
@@ -443,11 +456,12 @@ static av_cold int decode_init(AVCodecContext *avctx)
  */
 static void decodeplane8(uint8_t *dst, const uint8_t *buf, int buf_size, int plane)
 {
-    const uint64_t *lut = plane8_lut[plane];
+    const uint64_t *lut;
     if (plane >= 8) {
         av_log(NULL, AV_LOG_WARNING, "Ignoring extra planes beyond 8\n");
         return;
     }
+    lut = plane8_lut[plane];
     do {
         uint64_t v = AV_RN64A(dst) | lut[*buf++];
         AV_WN64A(dst, v);
@@ -1130,6 +1144,9 @@ static void decode_long_vertical_delta(uint8_t *dst,
                         x = bytestream2_get_be32(&dgb);
                     }
 
+                    if (ofsdst + (opcode - 1LL) * dstpitch > bytestream2_size_p(&pb))
+                        return;
+
                     while (opcode) {
                         bytestream2_seek_p(&pb, ofsdst, SEEK_SET);
                         if (h && (j == (ncolumns - 1))) {
@@ -1269,6 +1286,9 @@ static void decode_long_vertical_delta2(uint8_t *dst,
                         opcode = bytestream2_get_be32(&gb);
                         x = bytestream2_get_be32(&gb);
                     }
+
+                    if (ofsdst + (opcode - 1LL) * dstpitch > bytestream2_size_p(&pb))
+                        return;
 
                     while (opcode && bytestream2_get_bytes_left_p(&pb) > 1) {
                         bytestream2_seek_p(&pb, ofsdst, SEEK_SET);
@@ -1512,7 +1532,7 @@ static int decode_frame(AVCodecContext *avctx,
     buf_size -= bytestream2_tell(gb);
     desc = av_pix_fmt_desc_get(avctx->pix_fmt);
 
-    if (!s->init && avctx->bits_per_coded_sample <= 8 &&
+    if (!s->init && avctx->bits_per_coded_sample <= 8 - (s->masking == MASK_HAS_MASK) &&
         avctx->pix_fmt == AV_PIX_FMT_PAL8) {
         if ((res = cmap_read_palette(avctx, (uint32_t *)frame->data[1])) < 0)
             return res;
