@@ -159,6 +159,8 @@ static int loco_decode_plane(LOCOContext *l, uint8_t *data, int width, int heigh
     for (j = 1; j < height; j++) {
         /* restore left column */
         val = loco_get_rice(&rc);
+        if (val == INT_MIN)
+           return AVERROR_INVALIDDATA;
         data[0] = data[-stride] + val;
         /* restore all other pixels */
         for (i = 1; i < width; i++) {
@@ -291,6 +293,11 @@ static av_cold int decode_init(AVCodecContext *avctx)
     default:
         l->lossy = AV_RL32(avctx->extradata + 8);
         avpriv_request_sample(avctx, "LOCO codec version %i", version);
+    }
+
+    if (l->lossy > 65536U) {
+        av_log(avctx, AV_LOG_ERROR, "lossy %i is too large\n", l->lossy);
+        return AVERROR_INVALIDDATA;
     }
 
     l->mode = AV_RL32(avctx->extradata + 4);

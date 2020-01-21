@@ -577,6 +577,10 @@ static int decode_ihdr_chunk(AVCodecContext *avctx, PNGDecContext *s,
     }
     s->color_type       = bytestream2_get_byte(&s->gb);
     s->compression_type = bytestream2_get_byte(&s->gb);
+    if (s->compression_type) {
+        av_log(avctx, AV_LOG_ERROR, "Invalid compression method %d\n", s->compression_type);
+        goto error;
+    }
     s->filter_type      = bytestream2_get_byte(&s->gb);
     s->interlace_type   = bytestream2_get_byte(&s->gb);
     bytestream2_skip(&s->gb, 4); /* crc */
@@ -1348,6 +1352,9 @@ exit_loop:
             if (CONFIG_PNG_DECODER && avctx->codec_id != AV_CODEC_ID_APNG)
                 handle_p_frame_png(s, p);
             else if (CONFIG_APNG_DECODER &&
+                     s->previous_picture.f->width == p->width  &&
+                     s->previous_picture.f->height== p->height &&
+                     s->previous_picture.f->format== p->format &&
                      avctx->codec_id == AV_CODEC_ID_APNG &&
                      (ret = handle_p_frame_apng(avctx, s, p)) < 0)
                 goto fail;
