@@ -199,8 +199,8 @@ public class ContainerFormatTest extends TestCase
         fmt.establishOutputCodecId(ICodec.Type.CODEC_TYPE_AUDIO));
     
     fmt.setOutputFormat("mp4", null, null);
-    assertEquals(ICodec.ID.AV_CODEC_ID_H264,
-        fmt.establishOutputCodecId(ICodec.Type.CODEC_TYPE_VIDEO));
+    assertEquals(ICodec.ID.AV_CODEC_ID_MPEG4,
+        fmt.establishOutputCodecId(ICodec.Type.CODEC_TYPE_VIDEO)); //MPEG4 is the new default format for mp4
     assertEquals(ICodec.ID.AV_CODEC_ID_AAC,
         fmt.establishOutputCodecId(ICodec.Type.CODEC_TYPE_AUDIO));
 

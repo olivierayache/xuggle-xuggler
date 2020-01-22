@@ -166,7 +166,7 @@ public class MediaWriterTest
       ;
     assert(file.exists());
     // allow 100k difference for debug builds
-    assertEquals(312571, file.length(), 100000);
+    assertEquals(986992, file.length(), 100000);
     log.debug("manually check: " + file);
   }
  
@@ -187,7 +187,7 @@ public class MediaWriterTest
       ;
     assert(file.exists());
     // allow 100k difference for debug builds
-    assertEquals(312571, file.length(), 100000);
+    assertEquals(986992, file.length(), 100000);
     log.debug("manually check: " + file);
   }
 

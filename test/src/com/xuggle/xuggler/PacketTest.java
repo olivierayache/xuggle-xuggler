@@ -114,7 +114,7 @@ public class PacketTest extends TestCase
     assertTrue(size == 5516);
     assertTrue(flags == 1);
     assertTrue(duration == 0);
-    assertTrue(position == 284);
+    assertTrue(position == 272); // 284 -> 272 due to new FFMPEG 3.x
     
   }
   

@@ -77,7 +77,7 @@ MetaDataTest :: testContainerGetMetaData()
   if (meta) {
     int32_t numKeys = meta->getNumKeys();
     VS_TUT_ENSURE("should be right", numKeys >= 5);
-    VS_TUT_ENSURE("should be right", numKeys <= 7);
+    VS_TUT_ENSURE("should be right", numKeys <= 9); // Update of LibMP3Lame to 3.100
     for(int32_t i = 0; i < numKeys; i++)
     {
       const char* key = meta->getKey(i);

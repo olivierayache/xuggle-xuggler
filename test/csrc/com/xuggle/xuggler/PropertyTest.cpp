@@ -65,16 +65,16 @@ PropertyTest :: testCreation()
   stack.setGlobalLevel(Logger::LEVEL_WARN, false);
   RefPointer<IStreamCoder> coder = IStreamCoder::make(IStreamCoder::ENCODING,
     ICodec::AV_CODEC_ID_H264);
-#ifdef VS_ENABLE_GPL
+//#ifdef VS_ENABLE_GPL
   int32_t numProperties = coder->getNumProperties();
   VS_TUT_ENSURE("", numProperties > 0);
   RefPointer <IProperty> property =  coder->getPropertyMetaData(0);
-//  VS_LOG_DEBUG("Name: %s", property->getName());
-//  VS_LOG_DEBUG("Description: %s", property->getHelp());
-//  VS_TUT_ENSURE("should exist", property);
-#else
- VS_TUT_ENSURE("", coder.value() == NULL);
-#endif
+  VS_LOG_DEBUG("Name: %s", property->getName());
+  VS_LOG_DEBUG("Description: %s", property->getHelp());
+  VS_TUT_ENSURE("should exist", property);
+//#else
+// VS_TUT_ENSURE("coder must be null", coder.value() == NULL);
+//#endif
 }
 
 void

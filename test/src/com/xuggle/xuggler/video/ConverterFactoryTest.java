@@ -74,7 +74,8 @@ public class ConverterFactoryTest
   {
     IPixelFormat.Type.NONE,    
     IPixelFormat.Type.PAL8,
-    IPixelFormat.Type.XVMC,
+    IPixelFormat.Type.XVMC_MPEG2_MC,
+    IPixelFormat.Type.XVMC_MPEG2_IDCT,
     IPixelFormat.Type.UYYVYY411,
     IPixelFormat.Type.BGR4,
     IPixelFormat.Type.RGB4,

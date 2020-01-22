@@ -55,6 +55,7 @@ namespace com { namespace xuggle { namespace xuggler {
     expected_packets = expected_audio_packets + expected_video_packets;
     expected_frame_rate = 15;
     expected_time_base = .0010; // This is the default BEFORE we read any packets
+    expected_read_time_base = .0666; // This is the default BEFORE we read any packets
     expected_width = 424;
     expected_height=176;
     expected_gops=12;
@@ -806,7 +807,7 @@ namespace com { namespace xuggle { namespace xuggler {
               offset);
           VS_TUT_ENSURE("could not decode any video", retval>0);
           num = ic->getTimeBase();
-          VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h.expected_time_base, .00001);
+          VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h.expected_read_time_base, .0001);
           offset += retval;
           if (frame->isComplete())
           {

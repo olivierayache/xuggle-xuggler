@@ -228,7 +228,7 @@ StreamCoderX264Test :: testDecodingAndEncodingH264VideoWithBFrames()
                      offset);
         VS_TUT_ENSURE("could not decode any video", retval>0);
         num = ic->getTimeBase();
-        VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h->expected_time_base, 0.00001);
+        VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h->expected_read_time_base, 0.0001);
         offset += retval;
         if (frame->isComplete())
         {
