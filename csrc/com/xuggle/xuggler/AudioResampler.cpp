@@ -33,8 +33,7 @@ namespace com { namespace xuggle { namespace xuggler
 
   AudioResampler :: AudioResampler()
   {
-    swrContext = NULL;  
-    mContext = 0;
+    swrContext = 0;  
     mOChannels=0;
     mOSampleRate=0;
     mIChannels=0;
@@ -51,11 +50,9 @@ namespace com { namespace xuggle { namespace xuggler
 
   AudioResampler :: ~AudioResampler()
   {
-//    if (swrContext){  
-//      swr_free(&swrContext);  
-//    }
-    if (mContext)
-      audio_resample_close(mContext);
+    if (swrContext){  
+      swr_free(&swrContext);  
+    }
   }
 
   AudioResampler*
@@ -121,46 +118,39 @@ namespace com { namespace xuggle { namespace xuggler
       retval = AudioResampler::make();
       if (retval)
       {
-//        if (!retval->swrContext){
-//               SwrContext* ret = swr_alloc_set_opts(NULL, // we're using existing context
-//                                av_get_default_channel_layout(outputChannels), // out_ch_layout
-//                                (enum AVSampleFormat) outputFmt, // out_sample_fmt
-//                                outputRate, // out_sample_rate
-//                                av_get_default_channel_layout(inputChannels), // in_ch_layout
-//                                (enum AVSampleFormat) inputFmt, // in_sample_fmt
-//                                inputRate, // in_sample_rate
-//                                0, // log_offset
-//                                NULL);
-//               if (ret){
-//                 retval->swrContext = ret;
-//                 int init = swr_init(retval->swrContext);
-//                 if(init != 0){
-//                   VS_LOG_ERROR("unable to init swr context in resampler %s", Error::make(init)->getDescription());
-//                   throw std::invalid_argument("unable to init swr context in resampler"); 
-//                 }
-//               }
-//           }  
-        retval->mContext = av_audio_resample_init(outputChannels, inputChannels,
-            outputRate, inputRate,
-            (enum AVSampleFormat) outputFmt, (enum AVSampleFormat) inputFmt,
-            filterLen, log2PhaseCount, (int)linear, cutoff);
-        if (retval->mContext)
-        {
-          retval->mOChannels = outputChannels;
-          retval->mOSampleRate = outputRate;
-          retval->mIChannels = inputChannels;
-          retval->mISampleRate = inputRate;
-          retval->mOFmt = outputFmt;
-          retval->mIFmt = inputFmt;
-          retval->mFilterLen = filterLen;
-          retval->mLog2PhaseCount = log2PhaseCount;
-          retval->mIsLinear = linear;
-          retval->mCutoff = cutoff;
-        }
-        else
-        {
-          VS_REF_RELEASE(retval);
-        }
+          
+               retval->swrContext = swr_alloc_set_opts(NULL, // we're using existing context
+                                av_get_default_channel_layout(outputChannels), // out_ch_layout
+                                (enum AVSampleFormat) outputFmt, // out_sample_fmt
+                                outputRate, // out_sample_rate
+                                av_get_default_channel_layout(inputChannels), // in_ch_layout
+                                (enum AVSampleFormat) inputFmt, // in_sample_fmt
+                                inputRate, // in_sample_rate
+                                0, // log_offset
+                                NULL);
+               if (retval->swrContext){
+                 av_opt_set_int(retval->swrContext, "phase_shift", log2PhaseCount, 0);
+                 av_opt_set_double(retval->swrContext, "cutoff", cutoff, 0);  
+                 av_opt_set_int(retval->swrContext, "filter_size", filterLen, 0);
+                 av_opt_set_int(retval->swrContext, "linear_interp", linear, 0);
+                 int init = swr_init(retval->swrContext);
+                 if(init != 0){
+                   //VS_LOG_ERROR("unable to init swr context in resampler %s", Error::make(init)->getDescription());
+                   throw std::invalid_argument("unable to init swr context in resampler"); 
+                 }
+                    retval->mOChannels = outputChannels;
+                    retval->mOSampleRate = outputRate;
+                    retval->mIChannels = inputChannels;
+                    retval->mISampleRate = inputRate;
+                    retval->mOFmt = outputFmt;
+                    retval->mIFmt = inputFmt;
+                    retval->mFilterLen = filterLen;
+                    retval->mLog2PhaseCount = log2PhaseCount;
+                    retval->mIsLinear = linear;
+                    retval->mCutoff = cutoff;
+               } else {
+                   VS_REF_RELEASE(retval);
+               }
       }
     }
     catch (std::bad_alloc & e)
@@ -362,15 +352,11 @@ namespace com { namespace xuggle { namespace xuggler
         throw std::invalid_argument("could not get output bytes");
 
       VS_ASSERT(mContext, "Should have been set at initialization");
-      if (!mContext)
+      if (!swrContext)
         throw std::invalid_argument("programmer error");
 
       // Now we should be far enough along that we can safely try a resample.
-//      retval = swr_convert(swrContext, (uint8_t**)&outBuf, numSamples, (const uint8_t**)&inBuf, numSamples);
-//      if (retval<0){
-//          printf("%s",Error::make(retval)->getDescription());
-//      }
-      retval = audio_resample(mContext, outBuf, inBuf, numSamples);
+      retval = swr_convert(swrContext, (uint8_t**)&outBuf, swr_get_out_samples(swrContext, numSamples), (const uint8_t**)&inBuf, numSamples);
 
 #if 0
       if (retval >0){

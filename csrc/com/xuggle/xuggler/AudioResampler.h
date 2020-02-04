@@ -21,10 +21,7 @@
 #define AUDIORESAMPLER_H_
 
 #include <com/xuggle/xuggler/IAudioResampler.h>
-
-
-struct ReSampleContext;
-struct SwrContext;
+#include <com/xuggle/xuggler/FfmpegIncludes.h>
 
 namespace com { namespace xuggle { namespace xuggler
   {
@@ -74,7 +71,6 @@ namespace com { namespace xuggle { namespace xuggler
     virtual ~AudioResampler();
   private:
     SwrContext *swrContext;//Not used for the moment will replace mContext and deprecated resampler
-    ReSampleContext *mContext;
     int32_t mOChannels;
     int32_t mOSampleRate;
     int32_t mIChannels;
