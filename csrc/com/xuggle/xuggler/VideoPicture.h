@@ -60,6 +60,7 @@ namespace com { namespace xuggle { namespace xuggler
         int width, int height, int64_t pts);
     virtual bool copy(IVideoPicture* srcFrame);
     virtual void setData(com::xuggle::ferry::IBuffer* buffer);
+    virtual void render();
 
     // Not for calling from Java
     /**

@@ -166,6 +166,14 @@ namespace com { namespace xuggle { namespace xuggler
     virtual bool copy(IVideoPicture* srcPicture)=0;
     
     /**
+     * Render this picture on configured surface. 
+     * Works only with HW accelerated {@link com.xuggle.xuggler.IPixelFormat}.
+     * {@link com.xuggle.xuggler.IStreamCoder#setHardwareDecoding(IPixelFormat.Type, Object)} 
+     * must be called before opening decoder. 
+     */
+    virtual void render()=0;
+    
+    /**
      * Get a new picture object.
      * <p>
      * You can specify -1 for width and height, in which case all getData() methods

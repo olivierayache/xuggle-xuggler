@@ -25,6 +25,10 @@
 #include <com/xuggle/xuggler/Global.h>
 #include "com/xuggle/xuggler/VideoPicture.h"
 
+extern "C" {
+#include <libavcodec/mediacodec.h>    
+}
+
 VS_LOG_SETUP(VS_CPP_PACKAGE);
 
 namespace com { namespace xuggle { namespace xuggler
@@ -198,6 +202,15 @@ namespace com { namespace xuggle { namespace xuggler
     }
     return retval;
   }
+              
+  void 
+  VideoPicture::render() {
+      if (mFrame && (av_pix_fmt_desc_get((AVPixelFormat) mFrame->format)->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
+        #if CONFIG_HEVC_MEDIA_DECODER
+          mediacodec_render_frame(mFrame);
+        #endif
+      }
+  }
 
   void
   VideoPicture :: fillAVFrame(AVFrame *frame)
@@ -230,40 +243,49 @@ namespace com { namespace xuggle { namespace xuggler
       // Need to copy the contents of frame->data to our
       // internal buffer.
       VS_ASSERT(frame, "no frame?");
-      VS_ASSERT(frame->data[0], "no data in frame");
-      // resize the frame to the AVFrame
-      mFrame->width = width;
-      mFrame->height = height;
-      mFrame->format = (int)pixel;
+      if (!(av_pix_fmt_desc_get((AVPixelFormat) frame->format)->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
+        VS_ASSERT(frame->data[0], "no data in frame");
+        // resize the frame to the AVFrame
+        mFrame->width = width;
+        mFrame->height = height;
+        mFrame->format = (int)pixel;
+      
+        int bufSize = getSize();
+        if (bufSize <= 0)
+          throw std::runtime_error("invalid size for frame");
 
-      int bufSize = getSize();
-      if (bufSize <= 0)
-        throw std::runtime_error("invalid size for frame");
+        if (!mBuffer || mBuffer->getBufferSize() < bufSize)
+          // reuse buffers if we can.
+          allocInternalFrameBuffer();
 
-      if (!mBuffer || mBuffer->getBufferSize() < bufSize)
-        // reuse buffers if we can.
-        allocInternalFrameBuffer();
+        uint8_t* buffer = (uint8_t*)mBuffer->getBytes(0, bufSize);
+        if (!buffer)
+          throw std::runtime_error("really?  no buffer");
 
-      uint8_t* buffer = (uint8_t*)mBuffer->getBytes(0, bufSize);
-      if (!buffer)
-        throw std::runtime_error("really?  no buffer");
-
-      if (frame->data[0])
-      {
-        // Make sure the frame isn't already using our buffer
-        if(buffer != frame->data[0])
+        if (frame->data[0])
         {
-          av_image_fill_arrays(mFrame->data, mFrame->linesize, buffer, 
+          // Make sure the frame isn't already using our buffer
+          if(buffer != frame->data[0])
+          {
+            av_image_fill_arrays(mFrame->data, mFrame->linesize, buffer, 
               (AVPixelFormat) frame->format, width, height, 1);
-          av_image_copy(mFrame->data, mFrame->linesize, (const uint8_t **)frame->data,
+            av_image_copy(mFrame->data, mFrame->linesize, (const uint8_t **)frame->data,
                   frame->linesize, (AVPixelFormat)frame->format, frame->width, frame->height);
+          }
+          mFrame->key_frame = frame->key_frame;
         }
-        mFrame->key_frame = frame->key_frame;
+        else
+        {
+          throw std::runtime_error("no data in frame to copy");
+        }
+      } else {
+          mFrame->width = width;
+          mFrame->height = height;
+          mFrame->format = (int) pixel;
+          //av_frame_copy_props(mFrame, frame);
+          mFrame->data[3] = frame->data[3];
       }
-      else
-      {
-        throw std::runtime_error("no data in frame to copy");
-      }
+
     }
     catch (std::exception & e)
     {

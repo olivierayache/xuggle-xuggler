@@ -19,6 +19,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <string>
 
 #include <com/xuggle/ferry/Logger.h>
 #include <com/xuggle/ferry/RefPointer.h>
@@ -32,11 +33,13 @@
 #include <com/xuggle/xuggler/Packet.h>
 #include <com/xuggle/xuggler/Property.h>
 #include <com/xuggle/xuggler/MetaData.h>
+#include <com/xuggle/ferry/JNIHelper.h>
 
 extern "C" {
 #include <libavutil/dict.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
+#include <libavcodec/mediacodec.h>
 
 #include "Error.h"
 }
@@ -112,6 +115,9 @@ StreamCoder::reset()
     {
       av_freep(&mCodecContext->extradata);
       av_freep(&mCodecContext->subtitle_header);
+#if CONFIG_HEVC_MEDIA_DECODER
+      mediacodec_free_context(mCodecContext);
+#endif
       av_freep(&mCodecContext);
     }
   }
@@ -150,7 +156,7 @@ StreamCoder :: readyAVContexts(
     // was previously set; we should do something about that.
 //    VS_LOG_ERROR("Warning... mojo rising");
     resetOptions(aCoder->mCodecContext);
-  }
+  }  
   aCoder->mCodecContext = avContext;
   aCoder->mStream = aStream;
   aCoder->mDirection = aDirection;
@@ -560,6 +566,11 @@ StreamCoder::setFrameRate(IRational* src)
 {
   if (mStream && !mOpened)
     mStream->setFrameRate(src);
+  if (mCodecContext && !mOpened && src){
+      mCodecContext->framerate.den = src->getDenominator();
+      mCodecContext->framerate.num = src->getNumerator();
+  }
+  
 }
 
 int32_t
@@ -903,7 +914,7 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
   outBufSize = samples->getMaxBufferSize();
   inBufSize = packet->getSize() - startingByte;
 
-  if (inBufSize > 0 && outBufSize > 0)
+  if (inBufSize > 0 && outBufSize > 0 || mCodec->getAVCodec()->capabilities & AV_CODEC_CAP_DELAY)
   {
     RefPointer<IBuffer> buffer = packet->getData();
     uint8_t * inBuf = 0;
@@ -942,7 +953,7 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
         // the API for decoding audio changed ot support planar audio and we
         // need to back-port
         
-        uint8_t* output;
+        
         
         if (retval >= 0 && got_frame) {
             if (!swr_is_initialized(swrContext)){
@@ -957,19 +968,17 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
                       NULL);
                 swr_init(swrContext);
             }
-          int plane_size;
-          int linesize;
-          int outChannels = av_frame_get_channels(frame);
           
+            int outChannels = av_frame_get_channels(frame);
+            uint8_t* output[1] = {outBuf};
 
-            av_samples_alloc(&output, &linesize, outChannels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-            int out_samples = swr_convert(swrContext, &output, frame->nb_samples, (const uint8_t**)frame->extended_data, frame->nb_samples);
+            int out_samples = swr_convert(swrContext, output, frame->nb_samples, (const uint8_t**)frame->extended_data, frame->nb_samples);
             if (out_samples < 0) {
                VS_LOG_ERROR("fail to convert samples: %s", Error::make(out_samples)->getDescription());
-               av_freep(&output);
+               //av_freep(&output);
                return out_samples;
             }
-            int data_size = av_samples_get_buffer_size(&plane_size,
+            int data_size = av_samples_get_buffer_size(NULL,
             outChannels,
             out_samples,
             AV_SAMPLE_FMT_S16,
@@ -988,9 +997,9 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
             VS_LOG_ERROR("Output buffer is not large enough; no audio actually returned");
             outBufSize = 0;
           } else {
-            memcpy(outBuf, output, data_size);
+//            memcpy(outBuf, output, data_size);
             outBufSize = data_size;
-            av_freep(&output);
+//            av_freep(&output);
           }
         }   
 
@@ -1154,7 +1163,7 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
 
     VS_ASSERT(inBuf, "incorrect size or no data in packet");
 
-    if (inBufSize > 0 && inBuf)
+    if (inBufSize > 0 && inBuf || mCodec->getAVCodec()->capabilities & AV_CODEC_CAP_DELAY)
     {
       VS_LOG_TRACE("Attempting decodeVideo(%p, %p, %d, %p, %d);",
           mCodecContext,
@@ -1190,12 +1199,8 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
         if (!timeBase)
           timeBase = this->getTimeBase();
 
-        int64_t packetTs = avFrame->reordered_opaque;
-        // if none, assume this packet's decode time, since
-        // it's presentation time should have been in reordered_opaque
-        if (packetTs == Global::NO_PTS)
-          packetTs = packet->getDts();
-
+        int64_t packetTs = av_frame_get_best_effort_timestamp(avFrame);
+        
         if (packetTs != Global::NO_PTS)
         {
           if (timeBase->getNumerator() != 0)
@@ -1209,9 +1214,16 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
             // See: http://code.google.com/p/xuggle/issues/detail?id=165
             // in this way we enforce that timestamps are always
             // increasing
-            if (nextPts < mFakeNextPts && packet->getPts() != Global::NO_PTS)
+            if (avFrame->reordered_opaque != Global::NO_PTS && nextPts < mFakeNextPts && packet->getPts() != Global::NO_PTS) {
+              VS_LOG_WARN("Bad order in pts packet pts will be used instead of frame pts (packetTs: %ld, reordered_opaque: %ld, nextPts: %ld, mFakeNextPts: %ld, packet pts: %ld)", 
+                      packetTs,
+                      avFrame->reordered_opaque, 
+                      nextPts,
+                      mFakeNextPts, 
+                      packet->getPts());
               nextPts = mFakePtsTimeBase->rescale(packet->getPts(),
                   timeBase.value());
+            }
             mFakeNextPts = nextPts;
           }
         }
@@ -1237,7 +1249,7 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
           this->getWidth(), this->getHeight(), mFakeCurrPts);
 
     }
-    av_free(avFrame);
+    av_frame_free(&avFrame);
   }
 
   return retval;
@@ -1308,7 +1320,7 @@ StreamCoder::encodeVideo(IPacket *pOutPacket, IVideoPicture *pFrame,
         bufLen = encodingBuffer->getBufferSize();
       }
 
-      if (buf && bufLen)
+      if (buf && bufLen || mCodec->getAVCodec()->capabilities & AV_CODEC_CAP_DELAY)
       {
         // Change the PTS in our frame to the timebase of the encoded stream
         RefPointer<IRational> thisTimeBase = getTimeBase();
@@ -1737,12 +1749,12 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
            codingFrame->nb_samples     = frameSize;
            codingFrame->format         = mCodecContext->sample_fmt;
            codingFrame->channel_layout = av_get_default_channel_layout(samples->getChannels());
-           retval = av_frame_get_buffer(codingFrame, 0);
-           if (retval<0){
-               printf("Error %s",Error::make(retval)->getDescription());
-               av_frame_free(&codingFrame);
-               throw std::bad_alloc();
-           }
+//           retval = av_frame_get_buffer(codingFrame, 0);
+//           if (retval<0){
+//               printf("Error %s",Error::make(retval)->getDescription());
+//               av_frame_free(&codingFrame);
+//               throw std::bad_alloc();
+//           }
       
     retval = avcodec_fill_audio_frame(codingFrame, samples->getChannels(), mCodecContext->sample_fmt, (const uint8_t*)convertAvSamples, data_size, 0);
     if (retval<0){
@@ -2215,6 +2227,43 @@ StreamCoder :: setStandardsCompliance(CodecStandardsCompliance compliance)
   mCodecContext->strict_std_compliance = compliance;
   return 0;
 }
+
+int32_t 
+StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface) 
+{
+  if (!(av_pix_fmt_desc_get((AVPixelFormat)type)->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
+      VS_LOG_WARN("Requested type is not hardware accelerated, default decoder will be used instead %d %d", av_pix_fmt_desc_get((AVPixelFormat)type)->flags, AV_PIX_FMT_FLAG_HWACCEL);
+      return 0;
+  } 
+  if (mCodecContext) {
+    resetOptions(mCodecContext);
+    Codec* codec = Codec::findDecodingCodec(mCodec->getID(), type);
+    if (!codec){
+        VS_LOG_WARN("No hardware decoder found for requested type, default decoder will be used instead");
+        return 0;
+    }
+    readyAVContexts(mDirection,
+        this,
+        mStream,
+        codec,
+        mCodecContext,
+        NULL); 
+    
+    if (type == IPixelFormat::MEDIACODEC) { 
+      if (!mCodecContext->hwaccel_context && surface){  
+        #if CONFIG_HEVC_MEDIA_DECODER
+          mediacodec_alloc_context(mCodecContext, JNIHelper::sGetEnv(), surface);
+        #endif
+      }
+    } else {
+      VS_LOG_WARN("Hardware context not yet supported %s", mCodecContext->hwaccel->name);
+    }
+  } else {
+    VS_LOG_WARN("try to set HW decoding on uninitialized AVContext");
+  }   
+  return 0;
+}
+
 }
 }
 }

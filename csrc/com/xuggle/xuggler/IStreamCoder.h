@@ -861,7 +861,7 @@ namespace com { namespace xuggle { namespace xuggler
      * time stamps on output packets for the {@link IStream} it
      * is ultimately destined for.
      * @return true for yes; false for no
-     * @see #setAutomaticallyStampPacketsForStream(boolean)
+     * @see #setAutomaticallyStampPacketsForStream(bool)
      * @since 3.2
      */
     virtual bool getAutomaticallyStampPacketsForStream()=0;
@@ -1001,6 +1001,16 @@ namespace com { namespace xuggle { namespace xuggler
      */
     virtual int32_t setStandardsCompliance(CodecStandardsCompliance compliance)=0;
 
+#ifdef SWIGJAVA
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    virtual int32_t setHardwareDecoding(IPixelFormat::Type type, jobject surface=NULL)=0;
+#endif    
     /**
      * Open the codec with the given options.
      *
