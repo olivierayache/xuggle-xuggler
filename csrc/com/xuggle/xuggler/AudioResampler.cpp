@@ -170,28 +170,28 @@ namespace com { namespace xuggle { namespace xuggler
   int
   AudioResampler :: getOutputChannels()
   {
-    VS_ASSERT(mContext, "no context");
+    VS_ASSERT(swrContext, "no context");
     return mOChannels;
   }
 
   int
   AudioResampler :: getOutputRate()
   {
-    VS_ASSERT(mContext, "no context");
+    VS_ASSERT(swrContext, "no context");
     return mOSampleRate;
   }
 
   int
   AudioResampler :: getInputChannels()
   {
-    VS_ASSERT(mContext, "no context");
+    VS_ASSERT(swrContext, "no context");
     return mIChannels;
   }
 
   int
   AudioResampler :: getInputRate()
   {
-    VS_ASSERT(mContext, "no context");
+    VS_ASSERT(swrContext, "no context");
     return mISampleRate;
   }
 
@@ -351,7 +351,7 @@ namespace com { namespace xuggle { namespace xuggler
       if (!outBuf)
         throw std::invalid_argument("could not get output bytes");
 
-      VS_ASSERT(mContext, "Should have been set at initialization");
+      VS_ASSERT(swrContext, "Should have been set at initialization");
       if (!swrContext)
         throw std::invalid_argument("programmer error");
 
