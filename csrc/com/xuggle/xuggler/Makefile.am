@@ -14,10 +14,13 @@ libxuggle_xuggler_la_LIBADD= $(VS_PKG_LIBRARIES)
 libxuggle_xuggler_la_SOURCES= \
   AudioResampler.cpp \
   AudioSamples.cpp \
+  BufferSink.cpp \
+  BufferSource.cpp \
   Codec.cpp \
   Container.cpp \
   ContainerFormat.cpp \
   Error.cpp \
+  FilterChain.cpp \
   VideoPicture.cpp \
   Global.cpp \
   IAudioResampler.cpp \
@@ -26,6 +29,7 @@ libxuggle_xuggler_la_SOURCES= \
   IContainer.cpp \
   IContainerFormat.cpp \
   IError.cpp \
+  IFilterChain.cpp \
   IVideoPicture.cpp \
   IIndexEntry.cpp \
   IndexEntry.cpp \
@@ -42,6 +46,7 @@ libxuggle_xuggler_la_SOURCES= \
   IVideoResampler.cpp \
   MediaDataWrapper.cpp \
   MetaData.cpp \
+  MediaFilter.cpp \
   Packet.cpp \
   Property.cpp \
   Rational.cpp \
@@ -68,6 +73,8 @@ libxuggle_xuggler_la_HEADERS= \
   IAudioResampler.h \
   IAudioSamples.h \
   IAudioSamples.swg \
+  IBufferSink.h \
+  IBufferSource.h \
   ICodec.h \
   ICodec.swg \
   IContainerFormat.h \
@@ -76,6 +83,7 @@ libxuggle_xuggler_la_HEADERS= \
   IContainer.swg \
   IError.h \
   IError.swg \
+  IFilterChain.h \
   IIndexEntry.h \
   IIndexEntry.swg \
   IVideoPicture.h \
@@ -86,6 +94,7 @@ libxuggle_xuggler_la_HEADERS= \
   IMetaData.swg \
   IMediaDataWrapper.h \
   IMediaDataWrapper.swg \
+  IMediaFilter.h \
   IPacket.h \
   IPacket.swg \
   IPixelFormat.swg \
@@ -103,13 +112,17 @@ libxuggle_xuggler_la_HEADERS= \
   Xuggler.i \
   AudioResampler.h \
   AudioSamples.h \
+  BufferSink.h \
+  BufferSource.h \
   Codec.h \
   ContainerFormat.h \
   Container.h \
   Error.h \
+  FilterChain.h \
   IndexEntry.h \
   VideoPicture.h \
   MediaDataWrapper.h \
+  MediaFilter.h \
   MetaData.h \
   Packet.h \
   PixelFormat.h \
