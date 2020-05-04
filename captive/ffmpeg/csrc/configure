@@ -202,6 +202,7 @@ External library support:
   Also note that the following help text describes the purpose of the libraries
   themselves, not all their features will necessarily be usable by FFmpeg.
 
+  --enable-mediandk        enable Android MediaCodec support using NDKMediaCodec [autodetect]
   --disable-alsa           disable ALSA support [autodetect]
   --disable-appkit         disable Apple AppKit framework [autodetect]
   --disable-avfoundation   disable Apple AVFoundation framework [autodetect]
@@ -1544,6 +1545,7 @@ EXTERNAL_AUTODETECT_LIBRARY_LIST="
     sndio
     xlib
     zlib
+    mediandk
 "
 
 EXTERNAL_LIBRARY_GPL_LIST="
@@ -1638,6 +1640,7 @@ EXTERNAL_LIBRARY_LIST="
     openal
     opencl
     opengl
+    
 "
 
 HWACCEL_AUTODETECT_LIBRARY_LIST="
@@ -2993,6 +2996,8 @@ libx264_encoder_deps="libx264"
 libx264rgb_encoder_deps="libx264 x264_csp_bgr"
 libx264rgb_encoder_select="libx264_encoder"
 libx265_encoder_deps="libx265"
+mediacodec_decoder_deps="mediandk"
+mediacodec_encoder_deps="mediandk"
 libxavs_encoder_deps="libxavs"
 libxvid_encoder_deps="libxvid"
 libzvbi_teletext_decoder_deps="libzvbi"
@@ -6084,6 +6089,9 @@ enabled rkmpp             && { { require_pkg_config rockchip_mpp rockchip_mpp ro
                                  die "ERROR: Rockchip MPP is outdated, please get a more recent one."; } &&
                                { enabled libdrm ||
                                  die "ERROR: rkmpp requires --enable-libdrm"; }
+                             }
+enabled mediandk          && { check_lib mediandk media/NdkMediaCodec.h AMediaCodec_createCodecByName -lmediandk &&
+                               check_lib android android/native_window_jni.h ANativeWindow_fromSurface -landroid;
                              }
 
 if enabled gcrypt; then

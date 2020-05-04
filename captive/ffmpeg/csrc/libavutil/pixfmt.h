@@ -302,13 +302,13 @@ enum AVPixelFormat {
     AV_PIX_FMT_P010LE, ///< like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, little-endian
     AV_PIX_FMT_P010BE, ///< like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, big-endian
 
+    AV_PIX_FMT_MEDIACODEC, ///< HW decoding through Android Media Codec
+
     AV_PIX_FMT_GBRAP12BE,  ///< planar GBR 4:4:4:4 48bpp, big-endian
     AV_PIX_FMT_GBRAP12LE,  ///< planar GBR 4:4:4:4 48bpp, little-endian
 
     AV_PIX_FMT_GBRAP10BE,  ///< planar GBR 4:4:4:4 40bpp, big-endian
     AV_PIX_FMT_GBRAP10LE,  ///< planar GBR 4:4:4:4 40bpp, little-endian
-
-    AV_PIX_FMT_MEDIACODEC, ///< hardware decoding through MediaCodec
 
     AV_PIX_FMT_GRAY12BE,   ///<        Y        , 12bpp, big-endian
     AV_PIX_FMT_GRAY12LE,   ///<        Y        , 12bpp, little-endian
