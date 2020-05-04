@@ -5,12 +5,12 @@
 # ALSO CHANGE ANY CORRESPONDING VERSION NUMBERS IN THE
 # JAVA build.xml FILE
 m4_define([VSM4_LIB_MAJOR_VERSION], [5])
-m4_define([VSM4_LIB_MINOR_VERSION], [5])
+m4_define([VSM4_LIB_MINOR_VERSION], [6])
 
 AC_INIT([xuggler],[VSM4_LIB_MAJOR_VERSION.VSM4_LIB_MINOR_VERSION],[info@xuggle.com])
 AC_PREREQ([2.69])
 AC_PREFIX_DEFAULT([${XUGGLE_HOME:-/usr/local}])
-AM_INIT_AUTOMAKE([-Wall -Werror no-dependencies nostdinc tar-pax 1.14.1 ])
+AM_INIT_AUTOMAKE([foreign -Wall -Werror no-dependencies nostdinc tar-pax 1.14.1 ])
 AM_MAINTAINER_MODE
 AM_SILENT_RULES([yes])
 AM_PROG_AR
@@ -162,6 +162,10 @@ case $host in
   *darwin*)
   HOST_TYPE=Mac
   ;;
+  *linux-android*)
+  HOST_TYPE=Android
+  VS_LDFLAGS+="-Wl,-Bsymbolic"
+  ;;
   *linux*)
   HOST_TYPE=Linux
   VS_LDFLAGS+="-Wl,-Bsymbolic"
@@ -191,6 +195,7 @@ case $HOST_TYPE in
 esac
 AM_CONDITIONAL([VS_OS_WINDOWS], [ test "${HOST_TYPE}" = "Windows" ])
 AM_CONDITIONAL([VS_OS_LINUX], [ test "${HOST_TYPE}" = "Linux" ])
+AM_CONDITIONAL([VS_OS_ANDROID], [ test "${HOST_TYPE}" = "Android" ])
 AM_CONDITIONAL([VS_OS_MAC], [ test "${HOST_TYPE}" = "Mac" ])
 
 AC_SUBST([HOST_TYPE])

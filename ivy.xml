@@ -18,7 +18,7 @@
       To publish sources to a maven repo, the
       m:classifier="sources" is required.
     -->
-    <artifact type="source" ext="jar" conf="sources" m:classifier="sources"/>
+    <artifact name="xuggle-xuggler-sources" type="source" ext="jar" conf="sources" m:classifier="sources"/>
   </publications>
 
   <dependencies defaultconf="default">

@@ -1286,7 +1286,7 @@
     <copy todir="${classes.dir}${app.nativeclasspath}/${xuggle.os}" verbose="true">
        <fileset dir="${dist.unix.dir}/stage/${xuggle.os}${xuggle.dir}/lib">
           <include name="*.so.${library.version.major}" />
-          <exclude name="*.*.*" />
+          <!--<exclude name="*.*.*" />-->
        </fileset>
        <fileset dir="${dist.unix.dir}/stage/${xuggle.os}${xuggle.dir}/lib">
           <include name="*.dylib" />

@@ -7088,6 +7088,11 @@ interix[[3-9]]*)
   _LT_TAGVAR(postdeps,$1)=
   ;;
 
+linux-android*)
+  # Remove lstdc++ to link statically against it
+  _LT_TAGVAR(postdeps,$1)=$(echo $_LT_TAGVAR(postdeps,$1) | sed s/-lstdc++//g)
+  ;;
+
 linux*)
   case `$CC -V 2>&1 | sed 5q` in
   *Sun\ C*)

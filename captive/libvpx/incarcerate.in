@@ -47,10 +47,21 @@ if [ "@VS_CROSS_COMPILE@" = "1" -o "${HOST_TYPE}" = "Mac" ]; then
       VPX_OPTIONS="$VPX_OPTIONS --enable-pic"
       case ${HOST_OS} in
         *x86_64*|*amd64*)
-        VPX_HOST=generic-gnu
-        ;;
+      	  case ${HOST_OS} in
+            *android*)
+            VPX_OPTIONS="$VPX_OPTIONS --disable-avx --disable-avx2"
+            VPX_HOST=x86_64-android-gcc
+            ;;
+	    *)
+            VPX_HOST=generic-gnu
+            ;;
+          esac
+	  ;;
         *arm*)
-        VPX_HOST=armv5te-android-gcc
+        VPX_HOST=armv7-android-gcc
+        ;;
+	*aarch64*)
+        VPX_HOST=arm64-android-gcc
         ;;
         *)
         VPX_HOST=x86-linux-gcc
@@ -77,7 +88,7 @@ fi
 # installed
 
 # shared support on vpx is limited at best
-VPX_OPTIONS="$VPX_OPTIONS --disable-shared --enable-runtime-cpu-detect"
+VPX_OPTIONS="$VPX_OPTIONS --disable-shared --disable-runtime-cpu-detect --disable-tools --disable-docs --disable-examples --disable-unit-tests"
 
 if test ! "x$VS_DEBUG" = "x"; then
   echo "Creating debug version of libvpx: $VS_DEBUG"
