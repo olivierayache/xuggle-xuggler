@@ -54,7 +54,12 @@ if VS_OS_LINUX
 libxuggle_la_LDFLAGS+= \
 	-nostdlib -static-libtool-libs -XCClinker -static-libgcc
 else
+if VS_OS_ANDROID
+libxuggle_la_LDFLAGS+= \
+	-nostdlib -static-libtool-libs -Wl,-Bstatic,-lstdc++ -XCClinker -lgcc
+else
 libxuggle_la_LDFLAGS+= \
 	-nostdlib -static-libtool-libs -XCClinker -static-libgcc
+endif
 endif
 endif

@@ -385,7 +385,7 @@ public class JNILibrary implements Comparable<JNILibrary>
         };
         suffixes = new String[]
         {
-          ".so"
+          ".so",".so."+com.xuggle.xuggler.Version.MAJOR_VERSION
         };
         break;
       case WINDOWS:

@@ -43,6 +43,8 @@ public class JNIEnv
     PPC64,
     /** 32-bit ARM based systems */
     ARM,
+    /** 64-bit ARM based systems */
+    ARM_64,
     /** A chip architecture unknown to {@link Ferry}. */
     UNKNOWN,
   }
@@ -111,6 +113,9 @@ public class JNIEnv
         javaCPUArch.startsWith("arm")) {
       javaArch = CPUArch.ARM;
     } else if (
+        javaCPUArch.startsWith("aarch64")) {
+      javaArch = CPUArch.ARM_64;
+    } else if (
         javaCPUArch.contains("86")
         )
     {
@@ -153,6 +158,10 @@ public class JNIEnv
         nativeCpu.startsWith("arm")
         )
       nativeArch = CPUArch.ARM;
+    else if (
+        nativeCpu.startsWith("aarch64")
+        )
+      nativeArch = CPUArch.ARM_64;
     else if (
         nativeCpu.contains("86")
         )
@@ -209,7 +218,7 @@ public class JNIEnv
       retval = OSFamily.WINDOWS;
     else if (nativeOs.startsWith("darwin"))
       retval = OSFamily.MAC;
-    else if (nativeOs.startsWith("linux"))
+    else if (nativeOs.startsWith("linux") || nativeOs.startsWith("android"))
       retval = OSFamily.LINUX;
     else
       retval = OSFamily.UNKNOWN;

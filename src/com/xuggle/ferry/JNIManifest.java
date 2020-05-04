@@ -43,6 +43,7 @@ class JNIManifest {
     PPC,
     PPC64,
     ARM,
+    ARM_64,
     UNKNOWN,
   }
   enum OS {

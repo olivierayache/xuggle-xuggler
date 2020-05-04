@@ -99,8 +99,11 @@ host_triplet = @host@
 @VS_OS_LINUX_TRUE@@VS_OS_WINDOWS_FALSE@am__append_2 = \
 @VS_OS_LINUX_TRUE@@VS_OS_WINDOWS_FALSE@	-nostdlib -static-libtool-libs -XCClinker -static-libgcc
 
-@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@am__append_3 = \
-@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@	-nostdlib -static-libtool-libs -XCClinker -static-libgcc
+@VS_OS_ANDROID_TRUE@@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@am__append_3 = \
+@VS_OS_ANDROID_TRUE@@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@	-nostdlib -static-libtool-libs -Wl,-Bstatic,-lstdc++ -XCClinker -lgcc
+
+@VS_OS_ANDROID_FALSE@@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@am__append_4 = \
+@VS_OS_ANDROID_FALSE@@VS_OS_LINUX_FALSE@@VS_OS_WINDOWS_FALSE@	-nostdlib -static-libtool-libs -XCClinker -static-libgcc
 
 subdir = csrc/com/xuggle
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -428,7 +431,7 @@ libxuggle_la_LIBADD = $(builddir)/xuggler/libxuggle-xuggler.la \
 libxuggle_la_LDFLAGS = -no-undefined -shared -version-number \
 	@LIB_MAJOR_VERSION@:@LIB_MINOR_VERSION@:0 $(VS_LDFLAGS) \
 	$(VS_PKG_LIBRARIES) $(am__append_1) $(am__append_2) \
-	$(am__append_3)
+	$(am__append_3) $(am__append_4)
 all: all-recursive
 
 .SUFFIXES:
@@ -442,9 +445,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu --ignore-deps csrc/com/xuggle/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign --ignore-deps csrc/com/xuggle/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu --ignore-deps csrc/com/xuggle/Makefile
+	  $(AUTOMAKE) --foreign --ignore-deps csrc/com/xuggle/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
