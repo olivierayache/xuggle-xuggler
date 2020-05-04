@@ -20,8 +20,15 @@
 #ifndef IPIXELFORMAT_H_
 #define IPIXELFORMAT_H_
 
-#include <com/xuggle/xuggler/Xuggler.h>
 #include <com/xuggle/ferry/RefCounted.h>
+#include <com/xuggle/xuggler/Xuggler.h>
+#include <libavutil/version.h>
+#include <libavcodec/version.h>
+
+
+#ifndef LIBAVUTIL_VERSION_MAJOR
+#define LIBAVUTIL_VERSION_MAJOR 55
+#endif // ! LIBAVUTIL_VERSION_MAJOR
 
 namespace com { namespace xuggle { namespace xuggler
 {
@@ -288,6 +295,8 @@ namespace com { namespace xuggle { namespace xuggler
 
     P010LE, ///< like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, little-endian
     P010BE, ///< like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, big-endian
+            
+    MEDIACODEC, ///< HW decoding through Android MediaCodec         
 
     NB,        ///< number of pixel formats, DO NOT USE THIS if you want to link with shared libav* because the number of formats might differ between versions
     } Type;

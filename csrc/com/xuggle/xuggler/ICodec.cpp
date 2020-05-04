@@ -35,10 +35,10 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   ICodec *
-  ICodec :: findEncodingCodec(ICodec::ID id)
+  ICodec :: findEncodingCodec(ICodec::ID id, const IPixelFormat::Type type)
   {
     Global::init();
-    return Codec::findEncodingCodec(id);
+    return Codec::findEncodingCodec(id, type);
   }
 
   ICodec *
@@ -56,10 +56,10 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   ICodec *
-  ICodec :: findDecodingCodec(ICodec::ID id)
+  ICodec :: findDecodingCodec(const ICodec::ID id, const IPixelFormat::Type type)
   {
     Global::init();
-    return Codec::findDecodingCodec(id);
+    return Codec::findDecodingCodec(id, type);
   }
   
   ICodec *

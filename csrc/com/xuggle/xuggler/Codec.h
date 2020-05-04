@@ -24,6 +24,8 @@
 #include <com/xuggle/xuggler/IContainerFormat.h>
 #include <com/xuggle/xuggler/FfmpegIncludes.h>
 
+#include "PixelFormat.h"
+
 namespace com { namespace xuggle { namespace xuggler
 {
 
@@ -58,11 +60,11 @@ namespace com { namespace xuggle { namespace xuggler
     // For calling from with C++, not Java.
     const AVCodec * getAVCodec() { return mCodec; }
 
-    static Codec *findEncodingCodec(const ICodec::ID);
+    static Codec *findEncodingCodec(const ICodec::ID, const IPixelFormat::Type=IPixelFormat::NONE);
     static Codec *findEncodingCodecByIntID(const int);
     static Codec *findEncodingCodecByName(const char*);
 
-    static Codec *findDecodingCodec(const ICodec::ID);
+    static Codec *findDecodingCodec(const ICodec::ID, const IPixelFormat::Type=IPixelFormat::NONE);
     static Codec *findDecodingCodecByIntID(const int);
     static Codec *findDecodingCodecByName(const char*);
 

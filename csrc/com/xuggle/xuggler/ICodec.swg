@@ -205,4 +205,6 @@
 
 %}
 
+%include <libavutil/version.h>
+%include <libavcodec/version.h>
 %include <com/xuggle/xuggler/ICodec.h>

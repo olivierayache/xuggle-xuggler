@@ -88,6 +88,7 @@ libxuggle_xuggler_la_HEADERS= \
   IMediaDataWrapper.swg \
   IPacket.h \
   IPacket.swg \
+  IPixelFormat.swg \
   IPixelFormat.h \
   IProperty.h \
   IRational.h \

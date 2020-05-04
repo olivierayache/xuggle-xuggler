@@ -81,9 +81,22 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   Codec *
-  Codec :: findEncodingCodec(const ICodec::ID id)
+  Codec :: findEncodingCodec(const ICodec::ID id, const IPixelFormat::Type type)
   {
-    return Codec::findEncodingCodecByIntID((const int)id);
+    if (IPixelFormat::NONE == type){
+      return Codec::findEncodingCodecByIntID((const int)id);
+    }
+    
+    AVHWAccel *hwaccel = NULL;
+
+    while ((hwaccel = av_hwaccel_next(hwaccel))){
+        if (hwaccel->id == id && hwaccel->pix_fmt == type){
+            return findEncodingCodecByName(hwaccel->name);
+        }
+    }
+    
+    return NULL;
+    
   }
   Codec *
   Codec :: findEncodingCodecByIntID(const int id)
@@ -115,11 +128,24 @@ namespace com { namespace xuggle { namespace xuggler
     }
     return retval;
   }
-
+  
   Codec *
-  Codec :: findDecodingCodec(const ICodec::ID id)
+  Codec :: findDecodingCodec(const ICodec::ID id,  const IPixelFormat::Type type)
   {
-    return Codec::findDecodingCodecByIntID((const int)id);
+        
+    if (IPixelFormat::NONE == type){
+        return Codec::findDecodingCodecByIntID((const int)id);
+    }  
+    
+    AVHWAccel *hwaccel = NULL;
+
+    while ((hwaccel = av_hwaccel_next(hwaccel))){
+        if (hwaccel->id == id && hwaccel->pix_fmt == type){
+            return findDecodingCodecByName(hwaccel->name);
+        }
+    }
+    
+    return NULL;
   }
 
   Codec *

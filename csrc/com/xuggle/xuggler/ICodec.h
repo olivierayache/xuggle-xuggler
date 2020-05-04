@@ -26,170 +26,14 @@
 #include <com/xuggle/xuggler/IPixelFormat.h>
 #include <com/xuggle/xuggler/IAudioSamples.h>
 
-#ifndef LIBAVCODEC_VERSION_MAJOR
-#define LIBAVCODEC_VERSION_MAJOR 57
-#endif // ! LIBAVCODEC_VERSION_MAJOR
+extern "C"{
+    #include <libavutil/version.h>
+    #include <libavcodec/version.h>
+}
 
-#ifndef FF_API_VIMA_DECODER
-#define FF_API_VIMA_DECODER     (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AUDIO_CONVERT
-#define FF_API_AUDIO_CONVERT     (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AVCODEC_RESAMPLE
-#define FF_API_AVCODEC_RESAMPLE  FF_API_AUDIO_CONVERT
-#endif
-#ifndef FF_API_GETCHROMA
-#define FF_API_GETCHROMA         (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_MISSING_SAMPLE
-#define FF_API_MISSING_SAMPLE    (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_LOWRES
-#define FF_API_LOWRES            (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_CAP_VDPAU
-#define FF_API_CAP_VDPAU         (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_BUFS_VDPAU
-#define FF_API_BUFS_VDPAU        (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_VOXWARE
-#define FF_API_VOXWARE           (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_SET_DIMENSIONS
-#define FF_API_SET_DIMENSIONS    (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_DEBUG_MV
-#define FF_API_DEBUG_MV          (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AC_VLC
-#define FF_API_AC_VLC            (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_OLD_MSMPEG4
-#define FF_API_OLD_MSMPEG4       (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_ASPECT_EXTENDED
-#define FF_API_ASPECT_EXTENDED   (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_ARCH_ALPHA
-#define FF_API_ARCH_ALPHA        (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_XVMC
-#define FF_API_XVMC              (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_ERROR_RATE
-#define FF_API_ERROR_RATE        (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_QSCALE_TYPE
-#define FF_API_QSCALE_TYPE       (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_MB_TYPE
-#define FF_API_MB_TYPE           (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_MAX_BFRAMES
-#define FF_API_MAX_BFRAMES       (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_NEG_LINESIZES
-#define FF_API_NEG_LINESIZES     (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_EMU_EDGE
-#define FF_API_EMU_EDGE          (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_ARCH_SH4
-#define FF_API_ARCH_SH4          (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_ARCH_SPARC
-#define FF_API_ARCH_SPARC        (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_UNUSED_MEMBERS
-#define FF_API_UNUSED_MEMBERS    (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_IDCT_XVIDMMX
-#define FF_API_IDCT_XVIDMMX      (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_INPUT_PRESERVED
-#define FF_API_INPUT_PRESERVED   (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_NORMALIZE_AQP
-#define FF_API_NORMALIZE_AQP     (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_GMC
-#define FF_API_GMC               (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_MV0
-#define FF_API_MV0               (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_CODEC_NAME
-#define FF_API_CODEC_NAME        (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AFD
-#define FF_API_AFD               (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_VISMV
-/* XXX: don't forget to drop the -vismv documentation */
-#define FF_API_VISMV             (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AUDIOENC_DELAY
-#define FF_API_AUDIOENC_DELAY    (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_VAAPI_CONTEXT
-#define FF_API_VAAPI_CONTEXT     (LIBAVCODEC_VERSION_MAJOR < 58)
-#endif
-#ifndef FF_API_AVCTX_TIMEBASE
-#define FF_API_AVCTX_TIMEBASE    (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_MPV_OPT
-#define FF_API_MPV_OPT           (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_STREAM_CODEC_TAG
-#define FF_API_STREAM_CODEC_TAG  (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_QUANT_BIAS
-#define FF_API_QUANT_BIAS        (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_RC_STRATEGY
-#define FF_API_RC_STRATEGY       (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_CODED_FRAME
-#define FF_API_CODED_FRAME       (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_MOTION_EST
-#define FF_API_MOTION_EST        (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_WITHOUT_PREFIX
-#define FF_API_WITHOUT_PREFIX    (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_SIDEDATA_ONLY_PKT
-#define FF_API_SIDEDATA_ONLY_PKT (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_VDPAU_PROFILE
-#define FF_API_VDPAU_PROFILE     (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_CONVERGENCE_DURATION
-#define FF_API_CONVERGENCE_DURATION (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_AVPICTURE
-#define FF_API_AVPICTURE         (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_AVPACKET_OLD_API
-#define FF_API_AVPACKET_OLD_API (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_RTP_CALLBACK
-#define FF_API_RTP_CALLBACK      (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_VBV_DELAY
-#define FF_API_VBV_DELAY         (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_CODER_TYPE
-#define FF_API_CODER_TYPE        (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_STAT_BITS
-#define FF_API_STAT_BITS         (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
-#ifndef FF_API_PRIVATE_OPT
-#define FF_API_PRIVATE_OPT      (LIBAVCODEC_VERSION_MAJOR < 59)
-#endif
+//#ifndef LIBAVCODEC_VERSION_MAJOR
+//#define LIBAVCODEC_VERSION_MAJOR 57
+//#endif // ! LIBAVCODEC_VERSION_MAJOR
 
 namespace com
 {
@@ -211,7 +55,7 @@ public:
   /**
    * These are the codecs this library currently supports.
    * These are based on FFMPEG Git versions with this HEAD:
-   * ed3a49a79b4c7018121ed72a864be30ef1ed09ed
+   * 6a97ba521558ce131fe839eed2d51ff745280e1d
    */
   typedef enum ID
   {
@@ -432,6 +276,25 @@ public:
     AV_CODEC_ID_APNG,
     AV_CODEC_ID_DAALA,
     AV_CODEC_ID_CFHD,
+    AV_CODEC_ID_TRUEMOTION2RT,
+    AV_CODEC_ID_M101,
+    AV_CODEC_ID_MAGICYUV,
+    AV_CODEC_ID_SHEERVIDEO,
+    AV_CODEC_ID_YLC,
+    AV_CODEC_ID_PSD,
+    AV_CODEC_ID_PIXLET,
+    AV_CODEC_ID_SPEEDHQ,
+    AV_CODEC_ID_FMVC,
+    AV_CODEC_ID_SCPR,
+    AV_CODEC_ID_CLEARVIDEO,
+    AV_CODEC_ID_XPM,
+    AV_CODEC_ID_AV1,
+    AV_CODEC_ID_BITPACKED,
+    AV_CODEC_ID_MSCC,
+    AV_CODEC_ID_SRGC,
+    AV_CODEC_ID_SVG,
+    AV_CODEC_ID_GDV,
+    AV_CODEC_ID_FITS,
 
     /* various PCM "codecs" */
     AV_CODEC_ID_FIRST_AUDIO = 0x10000,     ///< A dummy id pointing at the start of audio codecs
@@ -466,9 +329,11 @@ public:
     AV_CODEC_ID_PCM_S24LE_PLANAR,
     AV_CODEC_ID_PCM_S32LE_PLANAR,
     AV_CODEC_ID_PCM_S16BE_PLANAR,
-    /* new PCM "codecs" should be added right below this line starting with
-     * an explicit value of for example 0x10800
-     */
+
+    AV_CODEC_ID_PCM_S64LE = 0x10800,
+    AV_CODEC_ID_PCM_S64BE,
+    AV_CODEC_ID_PCM_F16LE,
+    AV_CODEC_ID_PCM_F24LE,
 
     /* various ADPCM codecs */
     AV_CODEC_ID_ADPCM_IMA_QT = 0x11000,
@@ -514,6 +379,8 @@ public:
     AV_CODEC_ID_ADPCM_THP_LE,
     AV_CODEC_ID_ADPCM_PSX,
     AV_CODEC_ID_ADPCM_AICA,
+    AV_CODEC_ID_ADPCM_IMA_DAT4,
+    AV_CODEC_ID_ADPCM_MTAF,
 
     /* AMR */
     AV_CODEC_ID_AMR_NB = 0x12000,
@@ -530,6 +397,7 @@ public:
     AV_CODEC_ID_SOL_DPCM,
 
     AV_CODEC_ID_SDX2_DPCM = 0x14800,
+    AV_CODEC_ID_GREMLIN_DPCM,
 
     /* audio codecs */
     AV_CODEC_ID_MP2 = 0x15000,
@@ -616,6 +484,10 @@ public:
     AV_CODEC_ID_INTERPLAY_ACM,
     AV_CODEC_ID_XMA1,
     AV_CODEC_ID_XMA2,
+    AV_CODEC_ID_DST,
+    AV_CODEC_ID_ATRAC3AL,
+    AV_CODEC_ID_ATRAC3PAL,
+    AV_CODEC_ID_DOLBY_E,
 
     /* subtitle codecs */
     AV_CODEC_ID_FIRST_SUBTITLE = 0x17000,          ///< A dummy ID pointing at the start of subtitle codecs.
@@ -649,6 +521,7 @@ public:
     AV_CODEC_ID_FIRST_UNKNOWN = 0x18000,           ///< A dummy ID pointing at the start of various fake codecs.
     AV_CODEC_ID_TTF = 0x18000,
 
+    AV_CODEC_ID_SCTE_35, ///< Contain timestamp estimated through PCR of program stream.
     AV_CODEC_ID_BINTEXT    = 0x18800,
     AV_CODEC_ID_XBIN,
     AV_CODEC_ID_IDF,
@@ -725,13 +598,16 @@ public:
   canEncode()=0;
 
   /**
-   * Find a codec that can be used for encoding.
+   * Find a codec that can be used for encoding or
+   * find a HW codec that can be used for encoding.
    * @param id The id of the codec
+   * @param type The HW accelerated pixel format
    * @return the codec, or null if we can't find it.
    *
    */
   static ICodec *
-  findEncodingCodec(ICodec::ID id);
+  findEncodingCodec(ICodec::ID id, const IPixelFormat::Type=IPixelFormat::NONE);
+  
   /**
    * Find a codec that can be used for encoding.
    * @param id The id of the codec, as an integer.
@@ -747,13 +623,17 @@ public:
    */
   static ICodec *
   findEncodingCodecByName(const char*id);
+  
   /**
-   * Find a codec that can be used for decoding.
+   * Find a codec that can be used for decoding or
+   * find a HW codec that can be used for decoding.
    * @param id The id of the codec
+   * @param type The HW accelerated pixel format
    * @return the codec, or null if we can't find it.
    */
   static ICodec *
-  findDecodingCodec(ICodec::ID id);
+  findDecodingCodec(ICodec::ID id, const IPixelFormat::Type=IPixelFormat::NONE);
+  
   /**
    * Find a codec that can be used for decoding.
    * @param id The id of the codec, as an integer

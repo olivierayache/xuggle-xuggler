@@ -56,7 +56,7 @@ SWIGEXPORT jint JNICALL Java_com_xuggle_xuggler_XugglerJNI_IContainer_1seekKeyFr
   return Java_com_xuggle_xuggler_XugglerJNI_IContainer_1seekKeyFrame_1_1SWIG_10(jenv, jcls, jarg1, jarg1_, jarg2, jarg3, jarg4);
 }
 }
-
+  
 
 extern "C" {
 
@@ -75,7 +75,7 @@ Java_com_xuggle_xuggler_Xuggler_init(JNIEnv *env, jclass)
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<
 // Xuggler.i: End generated code
-
+  
 %}
 
 %pragma(java) jniclassimports=%{
@@ -140,10 +140,10 @@ import com.xuggle.ferry.*;
 %include "enums.swg"
         
 %import <com/xuggle/ferry/Ferry.i>
-
+        
 %include <com/xuggle/xuggler/Xuggler.h>
 %include <com/xuggle/xuggler/IProperty.h>
-%include <com/xuggle/xuggler/IPixelFormat.h>
+%include <com/xuggle/xuggler/IPixelFormat.swg>
 %include <com/xuggle/xuggler/IRational.swg>
 %include <com/xuggle/xuggler/ITimeValue.h>
 %include <com/xuggle/xuggler/IMetaData.swg>
