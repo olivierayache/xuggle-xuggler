@@ -85,13 +85,13 @@ namespace com { namespace xuggle { namespace xuggler
      * Resamples the in picture based on the parameters set when
      * this resampler was constructed.
      *
-     * @param out The picture we'll resample to.  Check
+     * @param outVideoPicture The picture we'll resample to.  Check
      *     {@link IVideoPicture#isComplete()} after the call.
-     * @param in The picture we'll resample from.
+     * @param inVideoPicture The picture we'll resample from.
      *
      * @return >= 0 on success; <0 on error.
      */
-    virtual int32_t resample(IVideoPicture *out, IVideoPicture *in)=0;
+    virtual int32_t resample(IVideoPicture *outVideoPicture, IVideoPicture *inVideoPicture)=0;
 
     /*
      * Added for 1.19

@@ -29,6 +29,10 @@
 #include <com/xuggle/xuggler/IRational.h>
 #include <com/xuggle/xuggler/IMetaData.h>
 #include <com/xuggle/xuggler/IMediaData.h>
+#include <com/xuggle/xuggler/IMediaFilter.h>
+#include <com/xuggle/xuggler/IBufferSource.h>
+#include <com/xuggle/xuggler/IBufferSink.h>
+#include <com/xuggle/xuggler/IFilterChain.h>    
 #include <com/xuggle/xuggler/IAudioSamples.h>
 #include <com/xuggle/xuggler/ICodec.h>
 #include <com/xuggle/xuggler/IPacket.h>
@@ -45,6 +49,8 @@
 #include <com/xuggle/xuggler/IError.h>
 
 using namespace VS_CPP_NAMESPACE;
+
+#ifdef SWIGJAVA
 /**
  * Here to maintain BW-compatibility with Version 3.x of Xuggler;
  * can be removed when major version goes pass 3.
@@ -71,6 +77,7 @@ Java_com_xuggle_xuggler_Xuggler_init(JNIEnv *env, jclass)
 }
 
 }
+#endif
 
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -78,6 +85,7 @@ Java_com_xuggle_xuggler_Xuggler_init(JNIEnv *env, jclass)
   
 %}
 
+#ifdef SWIGJAVA
 %pragma(java) jniclassimports=%{
 import com.xuggle.ferry.*;
 %}
@@ -135,21 +143,31 @@ import com.xuggle.ferry.*;
 // Xuggler.i: End generated code
   
 %}
+#endif
 // As per 1.17, we now make sure we generate proper Java enums on
 // classes
-%include "enums.swg"
+//%include <enums.swg>
         
 %import <com/xuggle/ferry/Ferry.i>
         
 %include <com/xuggle/xuggler/Xuggler.h>
 %include <com/xuggle/xuggler/IProperty.h>
 %include <com/xuggle/xuggler/IPixelFormat.swg>
+#ifdef SWIGJAVA        
 %include <com/xuggle/xuggler/IRational.swg>
+#elif SWIGKOTLIN   
+%include <com/xuggle/xuggler/IRational.h>
+#endif        
 %include <com/xuggle/xuggler/ITimeValue.h>
+#ifdef SWIGJAVA
 %include <com/xuggle/xuggler/IMetaData.swg>
 %include <com/xuggle/xuggler/IMediaData.swg>
 %include <com/xuggle/xuggler/IPacket.swg>
 %include <com/xuggle/xuggler/IAudioSamples.swg>
+%include <com/xuggle/xuggler/IMediaFilter.h>
+%include <com/xuggle/xuggler/IBufferSource.h>
+%include <com/xuggle/xuggler/IBufferSink.h>
+%include <com/xuggle/xuggler/IFilterChain.h> 
 %include <com/xuggle/xuggler/IVideoPicture.swg>
 %include <com/xuggle/xuggler/ICodec.swg>
 %include <com/xuggle/xuggler/IAudioResampler.h>
@@ -162,3 +180,25 @@ import com.xuggle.ferry.*;
 %include <com/xuggle/xuggler/IMediaDataWrapper.swg>
 %include <com/xuggle/xuggler/Global.swg>
 %include <com/xuggle/xuggler/IError.swg>
+#elif SWIGKOTLIN
+%include <com/xuggle/xuggler/IMetaData.h>
+%include <com/xuggle/xuggler/IMediaData.h>
+%include <com/xuggle/xuggler/IAudioSamples.h>
+%include <com/xuggle/xuggler/IMediaFilter.h>
+%include <com/xuggle/xuggler/IBufferSource.h>
+%include <com/xuggle/xuggler/IBufferSink.h>
+%include <com/xuggle/xuggler/IFilterChain.h>    
+%include <com/xuggle/xuggler/ICodec.h>
+%include <com/xuggle/xuggler/IPacket.h>
+%include <com/xuggle/xuggler/IIndexEntry.h>
+%include <com/xuggle/xuggler/IAudioResampler.h>
+%include <com/xuggle/xuggler/IVideoPicture.h>
+%include <com/xuggle/xuggler/IVideoResampler.h>
+%include <com/xuggle/xuggler/IStreamCoder.h>
+%include <com/xuggle/xuggler/IStream.h>
+%include <com/xuggle/xuggler/IContainerFormat.h>
+%include <com/xuggle/xuggler/IContainer.h>
+%include <com/xuggle/xuggler/IMediaDataWrapper.h>
+%include <com/xuggle/xuggler/Global.h>
+%include <com/xuggle/xuggler/IError.h>
+#endif

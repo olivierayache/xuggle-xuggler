@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <com/xuggle/ferry/JNIHelper.h>
 
+#ifdef SWIGJAVA
 extern "C" {
   SWIGEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *);
 };
@@ -39,6 +40,8 @@ JNI_OnLoad(JavaVM *, void *)
    * to do here is return the version */
   return com::xuggle::ferry::JNIHelper::sGetJNIVersion();
 }
+#endif
+
 #include <com/xuggle/ferry/RefCounted.h>
 #include <com/xuggle/ferry/AtomicInteger.h>
 #include <com/xuggle/ferry/Logger.h>
@@ -48,6 +51,7 @@ JNI_OnLoad(JavaVM *, void *)
 
 using namespace com::xuggle::ferry;
 
+#ifdef SWIGJAVA
 /**
  * Here to maintain BW-compatibility with Version 3.x of Xuggler;
  * can be removed when major version goes pass 3.
@@ -71,7 +75,11 @@ Java_com_xuggle_ferry_Ferry_init(JNIEnv *env, jclass)
 }
 
 }
+#endif
 %}
+
+
+#ifdef KOTLINJAVA
 %pragma(java) jniclasscode=%{
   static {
     JNILibrary library = new JNILibrary("xuggle",
@@ -144,16 +152,29 @@ Java_com_xuggle_ferry_Ferry_init(JNIEnv *env, jclass)
   }
    
 %}
-
+  
+#elif SWIGKOTLIN
+SWIG_JAVABODY_PROXY(internal, internal, SWIGTYPE)
+SWIG_JAVABODY_TYPEWRAPPER(internal, internal, internal, SWIGTYPE)
+#endif
+            
 %import <com/xuggle/ferry/JNIHelper.swg>
 
 %include <com/xuggle/Xuggle.h>
 %include <com/xuggle/ferry/Ferry.h>
 %include <com/xuggle/ferry/AtomicInteger.h>
+#ifdef SWIGJAVA
 %include <com/xuggle/ferry/RefCounted.swg>
+#elif SWIGKOTLIN
+%include <com/xuggle/ferry/RefCounted.h>
+#endif
 %include <com/xuggle/ferry/Logger.h>
 %include <com/xuggle/ferry/Mutex.h>
+#ifdef SWIGJAVA
 %include <com/xuggle/ferry/IBuffer.swg>
+#elif SWIGKOTLIN
+%include <com/xuggle/ferry/IBuffer.h>
+#endif
 %include <com/xuggle/ferry/RefCountedTester.h>
 
 %typemap(javaimports) SWIGTYPE, SWIGTYPE*, SWIGTYPE& "import com.xuggle.ferry.*;"

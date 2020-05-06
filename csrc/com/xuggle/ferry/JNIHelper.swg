@@ -24,6 +24,7 @@
 %include <stdint.i>
 %typemap(javapackage) com::xuggle::ferry::RefCounted, com::xuggle::ferry::RefCounted *, com::xuggle::ferry::RefCounted & "com.xuggle.ferry"
 
+#ifdef SWIGJAVA
 %typemap(javabody) com::xuggle::ferry::RefCounted %{
   // JNIHelper.swg: Start generated code
   // >>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -430,8 +431,8 @@
   // >>>>>>>>>>>>>>>>>>>>>>>>>>>
   try
   {
-    $action
-  }
+ $action
+}
   catch(std::invalid_argument & e)
   {
     // we don't let a native exception override a java exception
@@ -481,7 +482,11 @@
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<
   // JNIHelper.swg: End generated code
 }
-
+#elif SWIGKOTLIN
+%exception{
+ $action
+}
+#endif
 // This makes any type labeled jNioByteArray show up in swig wrappers
 // as a java.nio.ByteBuffer type
 %typemap(jtype)  jNioByteArray, const jNioByteArray &  "java.nio.ByteBuffer";
