@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# This script is here to update the branch to the latest version
+git subtree pull --prefix=captive/libopenh264/csrc --squash https://github.com/cisco/openh264.git v2.1.0

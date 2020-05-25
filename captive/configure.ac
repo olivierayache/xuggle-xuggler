@@ -5,7 +5,7 @@
 # ALSO CHANGE ANY CORRESPONDING VERSION NUMBERS IN THE
 # JAVA build.xml FILE
 m4_define([VSM4_LIB_MAJOR_VERSION], [5])
-m4_define([VSM4_LIB_MINOR_VERSION], [5])
+m4_define([VSM4_LIB_MINOR_VERSION], [6])
 
 AC_INIT([xuggle-ffmpeg],[VSM4_LIB_MAJOR_VERSION.VSM4_LIB_MINOR_VERSION],[info@xuggle.com])
 AC_PREREQ([2.63])
@@ -201,6 +201,8 @@ AC_CONFIG_FILES([Makefile
                  libtheora/incarcerate
                  libspeex/Makefile
                  libspeex/incarcerate
+                 libopenh264/Makefile
+                 libopenh264/incarcerate
                  libx264/Makefile
                  libx264/incarcerate
                  libmp3lame/Makefile
