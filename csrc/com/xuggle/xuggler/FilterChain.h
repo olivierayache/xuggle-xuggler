@@ -18,12 +18,12 @@
 #include <com/xuggle/xuggler/IBufferSource.h>
 #include <com/xuggle/xuggler/IBufferSink.h>
 #include <com/xuggle/xuggler/IFilterChain.h>
+#include <list>
 
 extern "C" {
 #include <libavfilter/avfilter.h>
+#include <libavutil/channel_layout.h>
 }
-
-
 
 namespace com {
     namespace xuggle {
@@ -37,14 +37,19 @@ namespace com {
                 virtual IBufferSource* createSource(IAudioSamples::Format format,
                     int channels,
                     int sample_rate,
-                    IRational* time_base);
-                virtual IBufferSink* createSink();
+                    IRational* time_base,
+                    IAudioSamples::ChannelLayout channel_layout);
+                virtual IBufferSink* createSink(IAudioSamples::ChannelLayout channel_layout);
                 virtual int configure();
+                virtual int clear();
                 
                 FilterChain();
                 virtual ~FilterChain();
             private:
                 AVFilterGraph* mFilterGraph;
+                std::list<
+                        com::xuggle::ferry::RefPointer<IMediaFilter>
+                > mFilters;
             };
 
         }

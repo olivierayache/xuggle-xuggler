@@ -21,6 +21,10 @@
 #include <com/xuggle/xuggler/IBufferSource.h>
 #include <com/xuggle/xuggler/IBufferSink.h>
 
+extern "C" {
+#include <libavutil/channel_layout.h>
+}
+
 namespace com {
     namespace xuggle {
         namespace xuggler {
@@ -50,14 +54,15 @@ namespace com {
                 virtual IBufferSource* createSource(IAudioSamples::Format format,
                     int channels,
                     int sample_rate,
-                    IRational* time_base) = 0;
+                    IRational* time_base,
+                    IAudioSamples::ChannelLayout channel_layout = IAudioSamples::CH_NONE) = 0;
                 
                 /**
                  *
                  * @return a new sink for this chain
                  * 
                  */
-                virtual IBufferSink* createSink() = 0;
+                virtual IBufferSink* createSink(IAudioSamples::ChannelLayout channel_layout = IAudioSamples::CH_NONE) = 0;
                 
                 /**
                  * Configures the chain
@@ -65,6 +70,13 @@ namespace com {
                  * @return 0 on success
                  */
                 virtual int configure() = 0;
+                
+                /**
+                 * Clears this filter chain by removing all filters
+                 * 
+                 * @return 0 on success
+                 */
+                virtual int clear() = 0;
                 
                 IFilterChain();
                 virtual ~IFilterChain();

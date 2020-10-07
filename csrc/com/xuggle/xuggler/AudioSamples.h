@@ -45,6 +45,9 @@ namespace com { namespace xuggle { namespace xuggler
     virtual bool isComplete();
     virtual int32_t getSampleRate();
     virtual int32_t getChannels();
+    
+    virtual IAudioSamples::ChannelLayout getChannelLayout();
+
     virtual Format getFormat();
     virtual uint32_t getSampleBitDepth();
 
@@ -62,6 +65,11 @@ namespace com { namespace xuggle { namespace xuggler
     virtual void setComplete(bool complete, uint32_t numSamples,
         int32_t sampleRate, int32_t channels, Format sampleFmt,
         int64_t pts);
+
+    virtual void setComplete(bool complete, uint32_t numSamples, 
+        int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, 
+        Format format, int64_t pts);
+
 
 
     /*
@@ -102,6 +110,7 @@ namespace com { namespace xuggle { namespace xuggler
     uint32_t mRequestedSamples;
     int32_t mSampleRate;
     int32_t mChannels;
+    ChannelLayout mChannelLayout;
     int32_t mIsComplete;
     Format mSampleFmt;
     int64_t mPts;

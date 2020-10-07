@@ -35,9 +35,10 @@ namespace com {
                 VS_JNIUTILS_REFCOUNTED_OBJECT_PRIVATE_MAKE(BufferSource)
             public:
                 static BufferSource* make(AVFilterGraph* graph, IAudioSamples::Format format,
-                    int channels,
+                    int channels,    
                     int sample_rate,
-                    IRational* time_base);
+                    IRational* time_base,
+                    IAudioSamples::ChannelLayout channel_layout);
                 virtual int addAudioSamples(IAudioSamples* samples);
 
     

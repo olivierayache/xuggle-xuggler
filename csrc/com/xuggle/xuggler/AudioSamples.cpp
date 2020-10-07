@@ -38,6 +38,7 @@ namespace com { namespace xuggle { namespace xuggler
     mNumSamples = 0;
     mSampleRate = 0;
     mChannels = 1;
+    mChannelLayout = CH_NONE;
     mIsComplete = false;
     mSampleFmt = FMT_S16;
     mPts = Global::NO_PTS;
@@ -91,6 +92,7 @@ namespace com { namespace xuggle { namespace xuggler
         mSamples->getBufferSize() < (capacity + VS_AUDIOSAMPLES_BUFFER_PADDING))
     {
       // crap; need to ditch and re-recreate
+        VS_LOG_WARN("Internal buffer not big enough need to recreate %d",capacity);
       mSamples=0;
     }
     int32_t sampleSize = getSampleSize();
@@ -213,7 +215,14 @@ namespace com { namespace xuggle { namespace xuggler
   {
     return mChannels;
   }
+              
+  IAudioSamples::ChannelLayout 
+  AudioSamples::getChannelLayout() 
+  {
+    return mChannelLayout;        
+  }
 
+  
   uint32_t
   AudioSamples :: getNumSamples()
   {
@@ -269,6 +278,7 @@ namespace com { namespace xuggle { namespace xuggler
       channels = 1;
 
     mChannels = channels;
+    mChannelLayout = (ChannelLayout)av_get_default_channel_layout(mChannels);
     mSampleRate = sampleRate;
     mSampleFmt = format;
     if (mSamples)
@@ -293,6 +303,13 @@ namespace com { namespace xuggle { namespace xuggler
       mNumSamples = 0;
     }
     setPts(pts);
+  }
+  
+  void 
+  AudioSamples::setComplete(bool complete, uint32_t numSamples, int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, Format format, int64_t pts) 
+  {          
+      setComplete(complete, numSamples, sampleRate, channels, format, pts);
+      mChannelLayout = channelLayout;
   }
 
   int64_t

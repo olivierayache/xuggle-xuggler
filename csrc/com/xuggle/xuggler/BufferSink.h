@@ -22,6 +22,7 @@
 
 extern "C" {
 #include "libavfilter/avfilter.h"
+#include "libavfilter/buffersink.h"
 #include "libavutil/opt.h"
 }
 
@@ -32,7 +33,7 @@ namespace com {
             class BufferSink : public IBufferSink, public MediaFilter {
                 VS_JNIUTILS_REFCOUNTED_OBJECT(BufferSink)
             public:
-                static BufferSink* make(AVFilterGraph*);
+                static BufferSink* make(AVFilterGraph*, IAudioSamples::ChannelLayout channel_layout);
                 virtual int getSampleRate();
                 virtual int getChannels();
                 virtual void setNumSamples(int frameSize);

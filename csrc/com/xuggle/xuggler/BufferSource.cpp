@@ -13,6 +13,9 @@
 
 #include <com/xuggle/xuggler/BufferSource.h>
 #include <com/xuggle/xuggler/AudioSamples.h>
+#include <com/xuggle/ferry/Logger.h>
+
+VS_LOG_SETUP(VS_CPP_PACKAGE);
 
 
 extern "C" {
@@ -29,6 +32,10 @@ namespace com {
 
             int BufferSource::addAudioSamples(IAudioSamples* samples) {
                 int retval = -1;
+                if (!mFilterContext) {
+                    VS_LOG_ERROR("Try to add samples to an unitialized abuffer");
+                    return retval;
+                }
                 if (samples) {
                     AudioSamples* inSamples = dynamic_cast<AudioSamples*> (samples);
                     AVFrame* frame = av_frame_alloc();
@@ -37,7 +44,7 @@ namespace com {
                         frame->sample_rate = inSamples->getSampleRate();
                         frame->format = inSamples->getFormat();
                         frame->channels = inSamples->getChannels();
-                        frame->channel_layout = av_get_default_channel_layout(frame->channels);
+                        frame->channel_layout = inSamples->getChannelLayout();
                         frame->pts = inSamples->getPts();
                         int data_size = av_samples_get_buffer_size(&frame->linesize[0],
                                 frame->channels,
@@ -79,7 +86,8 @@ namespace com {
             BufferSource* BufferSource::make(AVFilterGraph* graph, IAudioSamples::Format format,
                     int channels,
                     int sample_rate,
-                    IRational* time_base) {
+                    IRational* time_base,
+                    IAudioSamples::ChannelLayout channel_layout) {
 
                 BufferSource* retval = NULL;
 
@@ -96,13 +104,14 @@ namespace com {
                             av_get_channel_layout_string(ch_layout,
                                     sizeof (ch_layout),
                                     0,
-                                    av_get_default_channel_layout(channels));
+                                    channel_layout == IAudioSamples::CH_NONE ? av_get_default_channel_layout(channels) : channel_layout);
                             av_opt_set_q(retval->mFilterContext, "time_base", (AVRational) {
                                 time_base->getNumerator(), time_base->getDenominator()
                             }, AV_OPT_SEARCH_CHILDREN);
                             av_opt_set_int(retval->mFilterContext, "sample_rate", sample_rate, AV_OPT_SEARCH_CHILDREN);
                             av_opt_set(retval->mFilterContext, "sample_fmt", av_get_sample_fmt_name((AVSampleFormat) format), AV_OPT_SEARCH_CHILDREN);
                             av_opt_set(retval->mFilterContext, "channel_layout", ch_layout, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set_int(retval->mFilterContext, "channels", channels, AV_OPT_SEARCH_CHILDREN);
                             if (avfilter_init_str(retval->mFilterContext, NULL) < 0) {
                                 VS_REF_RELEASE(retval);
                             }
