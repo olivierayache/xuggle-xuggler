@@ -91,9 +91,6 @@ AudioResamplerTest :: testGetters()
   LoggerStack stack;
   stack.setGlobalLevel(Logger::LEVEL_ERROR, false);
 
-  sampler = IAudioResampler::make(3, 2,
-      22050, 44100);
-  VS_TUT_ENSURE("sampler", !sampler);
   sampler = IAudioResampler::make(-1, -1,
       -1, -1);
   VS_TUT_ENSURE("sampler", !sampler);
@@ -109,9 +106,6 @@ AudioResamplerTest :: testInvalidArguments()
   stack.setGlobalLevel(Logger::LEVEL_ERROR, false);
 
   RefPointer<IAudioResampler> sampler;
-  sampler = IAudioResampler::make(3, 2,
-      22050, 44100);
-  VS_TUT_ENSURE("sampler", !sampler);
   sampler = IAudioResampler::make(-1, -1,
       -1, -1);
   VS_TUT_ENSURE("sampler", !sampler);

@@ -363,6 +363,7 @@ StreamCoderTest :: testDecodingAndEncodingFullyInterleavedFile()
     VS_TUT_ENSURE("Could not open output coder", retval >= 0);
   }
 
+  //hw->container->setProperty("movflags", (int64_t)4);
   // write header
   retval = hw->container->writeHeader();
   VS_TUT_ENSURE("could not write header", retval >= 0);
@@ -431,7 +432,7 @@ StreamCoderTest :: testDecodingAndEncodingFullyInterleavedFile()
             offset);
         VS_TUT_ENSURE("could not decode any video", retval>0);
         num = ic->getTimeBase();
-        VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h->expected_read_time_base, 0.0001);
+        VS_TUT_ENSURE_DISTANCE("time base changed", num->getDouble(), h->expected_time_base, 0.0001);
         offset += retval;
         if (frame->isComplete())
         {

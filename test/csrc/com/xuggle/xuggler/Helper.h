@@ -55,7 +55,6 @@ namespace com { namespace xuggle { namespace xuggler
     int expected_audio_samples;
     double expected_frame_rate;
     double expected_time_base;
-    double expected_read_time_base; // introduced due to new FFMPEG 3.x
     int expected_width;
     int expected_height;
     int expected_gops;
