@@ -301,6 +301,23 @@ namespace com { namespace xuggle { namespace xuggler
       av_dict_free(&tmp);
     return retval;
   }
+            
+  IStreamCoder::CodecStandardsCompliance Container::getStandardsCompliance() 
+  {
+      return mFormatContext ? (IStreamCoder::CodecStandardsCompliance) mFormatContext->strict_std_compliance : IStreamCoder::COMPLIANCE_NORMAL;
+  }
+            
+            
+  int32_t Container::setStandardsCompliance(IStreamCoder::CodecStandardsCompliance compliance) 
+  {
+      if (mFormatContext)
+      {
+          mFormatContext->strict_std_compliance = compliance;
+          return 0;
+      }
+      return -1;
+  }
+
 
   IContainerFormat*
   Container :: getContainerFormat()
@@ -492,14 +509,14 @@ namespace com { namespace xuggle { namespace xuggler
       retval = av_opt_set_dict(mFormatContext, options);
       if (retval < 0)
         throw std::runtime_error("could not set options");
-
+      
       if (mCustomIOHandler)
         retval = mCustomIOHandler->url_open(url, URLProtocolHandler::URL_WRONLY_MODE);
       else
         retval = avio_open2(&mFormatContext->pb,
             url, AVIO_FLAG_WRITE,
             &mFormatContext->interrupt_callback,
-            0
+            options
         );
       if (retval < 0)
         throw std::runtime_error("could not open file");

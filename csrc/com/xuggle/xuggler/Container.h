@@ -48,6 +48,8 @@ namespace com { namespace xuggle { namespace xuggler
         IContainerFormat* pContainerFormat);
     virtual int32_t open(const char *url, Type type,
         IContainerFormat* pContainerFormat, bool, bool);
+    virtual IStreamCoder::CodecStandardsCompliance getStandardsCompliance();
+    virtual int32_t setStandardsCompliance(IStreamCoder::CodecStandardsCompliance compliance);
     virtual IContainerFormat *getContainerFormat();
 
     virtual Type getType();
