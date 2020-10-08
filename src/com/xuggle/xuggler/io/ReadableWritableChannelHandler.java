@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.slf4j.Logger;
@@ -208,7 +209,33 @@ public class ReadableWritableChannelHandler implements IURLProtocolHandler
 
   public long seek(long offset, int whence)
   {
-    return -1;
+    if (mOpenStream == null || !(mOpenStream instanceof SeekableByteChannel))
+      return -1;
+    try
+    {
+      SeekableByteChannel stream = (SeekableByteChannel) mOpenStream;
+          switch (whence){
+              case SEEK_CUR:
+                  stream.position(stream.position() + offset);
+                  return offset;
+              case SEEK_SET:
+                  stream.position(offset);
+                  return offset;
+              case SEEK_SIZE:
+                  return stream.size();
+              case SEEK_END:
+                  stream.position(stream.size());
+                  return offset;
+              default:
+                  return -1;
+          }
+    }
+    catch (IOException e)
+    {
+      log.error("Got IO exception reading from stream: {}; {}",
+          mOpenStream, e);
+      return -1;
+    }
   }
 
   /**
@@ -243,7 +270,7 @@ public class ReadableWritableChannelHandler implements IURLProtocolHandler
 
   public boolean isStreamed(String url, int flags)
   {
-    return true;
+    return !(mReadChannel instanceof SeekableByteChannel) && !(mWriteChannel instanceof SeekableByteChannel);
   }
   /**
    * Returns the channel we'd input from if asked.
