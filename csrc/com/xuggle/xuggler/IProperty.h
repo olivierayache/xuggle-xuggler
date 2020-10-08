@@ -59,6 +59,7 @@ namespace com { namespace xuggle { namespace xuggler {
       PROPERTY_DURATION       = MKBETAG('D','U','R',' '),
       PROPERTY_COLOR          = MKBETAG('C','O','L','R'),
       PROPERTY_CHANNEL_LAYOUT = MKBETAG('C','H','L','A'),
+      PROPERTY_BOOL        = MKBETAG('B','O','O','L'),
       PROPERTY_UNKNOWN=-1,
     } Type;
 
