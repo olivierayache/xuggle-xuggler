@@ -61,9 +61,7 @@ namespace com {
             }
 
             MediaFilter::~MediaFilter() {
-                if (mFilterContext) {
-                    avfilter_free(mFilterContext);
-                }
+                //mFilterContext freed by FilterChain
                 mFilterContext = NULL;
                 mFilter = NULL;
             }
