@@ -81,7 +81,7 @@ namespace com { namespace xuggle { namespace xuggler
   
         newStream->mCoder = StreamCoder::make(
               direction == INBOUND?IStreamCoder::DECODING : IStreamCoder::ENCODING,
-              aStream->codec,
+              direction == INBOUND?aStream->codecpar : NULL,
               avCodec,
               newStream);
         newStream->mContainer = container;

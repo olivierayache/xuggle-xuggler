@@ -40,6 +40,7 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
 #include <libavcodec/mediacodec.h>
+#include <signal.h>
 
 #include "Error.h"
 }
@@ -61,6 +62,7 @@ StreamCoder::StreamCoder() :
   mStream = 0;
   mAudioFrameBuffer = 0;
   mBytesInFrameBuffer = 0;
+  mPtsOfFrameBuffer = Global::NO_PTS;
   mFakePtsTimeBase = IRational::make(1, AV_TIME_BASE);
   mFakeNextPts = Global::NO_PTS;
   mFakeCurrPts = Global::NO_PTS;
@@ -115,7 +117,7 @@ StreamCoder::reset()
     {
       av_freep(&mCodecContext->extradata);
       av_freep(&mCodecContext->subtitle_header);
-#if CONFIG_HEVC_MEDIA_DECODER
+#ifdef __ANDROID__
       mediacodec_free_context(mCodecContext);
 #endif
       av_freep(&mCodecContext);
@@ -169,6 +171,9 @@ StreamCoder :: readyAVContexts(
   avContext->codec_id = avCodec ? avCodec->id : AV_CODEC_ID_NONE;
   avContext->codec_type = avCodec ? avCodec->type : AVMEDIA_TYPE_UNKNOWN;
   avContext->codec = avCodec;
+  
+  if (aDirection == DECODING && aStream)
+    avContext->pkt_timebase = aStream->getAVStream()->time_base;
   
   switch (avContext->codec_type)
   {
@@ -391,6 +396,41 @@ StreamCoder::make(Direction direction, IStreamCoder* aCoder)
   return retval;
 }
 
+
+StreamCoder *
+StreamCoder::make(Direction direction,
+        AVCodecParameters *codecpar, const AVCodec* avCodec, Stream* stream)
+{
+    StreamCoder* retval = NULL;
+    AVCodecContext* codecCtx = NULL;
+    try{
+        retval = StreamCoder::make();
+        if (!retval){
+            throw std::bad_alloc();
+        }
+        codecCtx = avcodec_alloc_context3(avCodec);
+        if (codecCtx && codecpar){
+            if (avcodec_parameters_to_context(codecCtx, codecpar) < 0)
+                throw std::runtime_error("could not initialize codec");
+        }
+        
+        if (readyAVContexts(
+            direction,
+            retval,
+            stream,
+            NULL,
+            codecCtx,
+            avCodec) < 0)
+      throw std::runtime_error("could not initialize AVContext");
+    }
+    catch (std::exception & e)
+    {
+        VS_REF_RELEASE(retval);
+    }
+    return retval;
+}
+    
+    
 StreamCoder *
 StreamCoder::make(Direction direction, AVCodecContext * codecCtx,
     const AVCodec* avCodec, Stream* stream)
@@ -802,6 +842,11 @@ StreamCoder::open(IMetaData* aOptions, IMetaData* aUnsetOptions)
         throw std::runtime_error("could not open codec");
       }
     }
+    
+    if (mDirection == ENCODING && mStream) {
+        avcodec_parameters_from_context(mStream->getAVStream()->codecpar, mCodecContext);
+    }
+    
     mOpened = true;
 
     mNumDroppedFrames = 0;
@@ -919,6 +964,7 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
     RefPointer<IBuffer> buffer = packet->getData();
     uint8_t * inBuf = 0;
     uint8_t * outBuf = 0;
+    uint16_t outChannelLayout; 
 
     VS_ASSERT(buffer, "no buffer in packet!");
     if (buffer)
@@ -946,10 +992,18 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
 
       mCodecContext->reordered_opaque = packet->getPts();
 
+      
       {
         AVFrame* frame = av_frame_alloc();
         int got_frame = 0;
         retval = avcodec_decode_audio4(mCodecContext, frame, &got_frame, &pkt);
+//        char ch_layout[64];
+//                            av_get_channel_layout_string(ch_layout,
+//                                    sizeof (ch_layout),
+//                                    0,
+//                                    frame->channel_layout);
+//        VS_LOG_ERROR("ch layout: %s", ch_layout);
+        outChannelLayout = frame->channel_layout;
         // the API for decoding audio changed ot support planar audio and we
         // need to back-port
         
@@ -958,10 +1012,12 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
         if (retval >= 0 && got_frame) {
             if (!swr_is_initialized(swrContext)){
                 swr_alloc_set_opts(swrContext,  // we're using an existing context
-                      av_get_default_channel_layout(av_frame_get_channels(frame)), // out_ch_layout
+                      //av_get_default_channel_layout(av_frame_get_channels(frame)),
+                      frame->channel_layout == 0 ? av_get_default_channel_layout(frame->channels) : frame->channel_layout, // out_ch_layout
                       AV_SAMPLE_FMT_S16,                // out_sample_fmt
                       frame->sample_rate,       // out_sample_rate
-                      av_frame_get_channel_layout(frame) == 0 ? av_get_default_channel_layout(av_frame_get_channels(frame)) : av_frame_get_channel_layout(frame),    // in_ch_layout
+                      //av_frame_get_channel_layout(frame) == 0 ? av_get_default_channel_layout(av_frame_get_channels(frame)) : av_frame_get_channel_layout(frame),    // in_ch_layout
+                      frame->channel_layout == 0 ? av_get_default_channel_layout(frame->channels) : frame->channel_layout,    // in_ch_layout
                       mCodecContext->sample_fmt,        // in_sample_fmt
                       frame->sample_rate,       // in_sample_rate
                       0,                                // log_offset
@@ -1100,7 +1156,7 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
 
       // copy the packet PTS
       samples->setComplete(numSamples > 0, numSamples, getSampleRate(),
-          getChannels(), format, mFakeCurrPts);
+          getChannels(), (IAudioSamples::ChannelLayout)outChannelLayout, format, mFakeCurrPts);
     }
   }
 
@@ -1618,6 +1674,12 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
         samplesConsumed = bytesToCopyToFrameBuffer / bytesPerSample;
         retval = samplesConsumed;
         usingInternalFrameBuffer = true;
+        
+      }
+      
+      if (mPtsOfFrameBuffer == Global::NO_PTS) {
+          RefPointer<IRational> thisTimeBase = getTimeBase();
+          mPtsOfFrameBuffer = thisTimeBase->rescale(samples->getTimeStamp() + IAudioSamples::samplesToDefaultPts(startingSample, samples->getSampleRate()), mFakePtsTimeBase.value());
       }
     }
     else
@@ -1719,18 +1781,37 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
            int ret = 0;
            if (!swr_is_initialized(swrContext)){
                swr_alloc_set_opts(swrContext, // we're using existing context
-                                av_get_default_channel_layout(samples->getChannels()), // out_ch_layout
+                                samples->getChannelLayout(), // out_ch_layout
                                 mCodecContext->sample_fmt, // out_sample_fmt
                                 samples->getSampleRate(), // out_sample_rate
-                                av_get_default_channel_layout(samples->getChannels()), // in_ch_layout
+                                samples->getChannelLayout(), // in_ch_layout
                                 AV_SAMPLE_FMT_S16, // in_sample_fmt
                                 samples->getSampleRate(), // in_sample_rate
                                 0, // log_offset
                                 NULL);
                swr_init(swrContext);
            }
-           av_samples_alloc(&convertAvSamples, NULL, samples->getChannels(), frameSize, mCodecContext->sample_fmt, 0);
-           ret = swr_convert(swrContext, &convertAvSamples, frameSize, (const uint8_t**) &frameBuffer, frameSize);
+           
+           
+           AVFrame* codingFrame = av_frame_alloc();
+           codingFrame->nb_samples     = frameSize;
+           codingFrame->format         = mCodecContext->sample_fmt;
+           codingFrame->channel_layout = samples->getChannelLayout();
+                      
+           if (samples->getPts() != Global::NO_PTS) {
+               codingFrame->pts            = mPtsOfFrameBuffer;
+           }
+           
+           
+           
+           retval = av_frame_get_buffer(codingFrame, 0);
+           if (retval<0){
+               printf("Error %s",Error::make(retval)->getDescription());
+               av_frame_free(&codingFrame);
+               throw std::bad_alloc();
+           }
+
+           ret = swr_convert(swrContext, codingFrame->extended_data, frameSize, (const uint8_t**) &frameBuffer, frameSize);
            if (ret < 0) {
                VS_LOG_ERROR("fail to convert samples: %s", Error::make(ret)->getDescription());
                av_freep(&convertAvSamples);
@@ -1743,29 +1824,7 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
                 samples->getNumSamples(),
                 frameSize);
         
-           int data_size = av_samples_get_buffer_size(NULL, samples->getChannels(), frameSize, mCodecContext->sample_fmt, 0);
-           
-           AVFrame* codingFrame = av_frame_alloc();
-           codingFrame->nb_samples     = frameSize;
-           codingFrame->format         = mCodecContext->sample_fmt;
-           codingFrame->channel_layout = av_get_default_channel_layout(samples->getChannels());
-//           retval = av_frame_get_buffer(codingFrame, 0);
-//           if (retval<0){
-//               printf("Error %s",Error::make(retval)->getDescription());
-//               av_frame_free(&codingFrame);
-//               throw std::bad_alloc();
-//           }
-      
-    retval = avcodec_fill_audio_frame(codingFrame, samples->getChannels(), mCodecContext->sample_fmt, (const uint8_t*)convertAvSamples, data_size, 0);
-    if (retval<0){
-        printf("Error in filling frame %s %p %d %d %p %d\n",Error::make(retval)->getDescription(), codingFrame, samples->getChannels(), codingFrame->format, frameBuffer, data_size);
-        av_freep(&convertAvSamples);    
-        av_frame_free(&codingFrame);
-        throw std::bad_alloc();
-    }
-
     retval = avcodec_encode_audio2(mCodecContext, &pkt, codingFrame, &got_packet);
-    av_freep(&convertAvSamples);    
     av_frame_free(&codingFrame);
     }
                
@@ -1787,6 +1846,7 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
         // regardless of what happened, nuke any data in our frame
         // buffer.
         mBytesInFrameBuffer = 0;
+        mPtsOfFrameBuffer = Global::NO_PTS;
         if (retval >= 0)
         {
           // and only do this if a packet is returned
@@ -2182,6 +2242,10 @@ StreamCoder::setExtraData(com::xuggle::ferry::IBuffer* src, int32_t offset,
       return -1;
   }
   memcpy(mCodecContext->extradata, bytes, numBytes);
+  
+  if (mStream) {
+    avcodec_parameters_from_context(mStream->getAVStream()->codecpar, mCodecContext);
+  }
   return numBytes;
 }
 int32_t
@@ -2235,13 +2299,22 @@ StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface)
       VS_LOG_WARN("Requested type is not hardware accelerated, default decoder will be used instead %d %d", av_pix_fmt_desc_get((AVPixelFormat)type)->flags, AV_PIX_FMT_FLAG_HWACCEL);
       return 0;
   } 
-  if (mCodecContext) {
-    resetOptions(mCodecContext);
+  
+  if (mCodecContext && mStream) {
+    avcodec_free_context(&mCodecContext);
+    
     Codec* codec = Codec::findDecodingCodec(mCodec->getID(), type);
     if (!codec){
         VS_LOG_WARN("No hardware decoder found for requested type, default decoder will be used instead");
         return 0;
     }
+    
+    mCodecContext = avcodec_alloc_context3(codec->getAVCodec());
+    if (mCodecContext){
+        if (avcodec_parameters_to_context(mCodecContext, mStream->getAVStream()->codecpar) < 0)
+            throw std::runtime_error("could not initialize codec");
+    }
+    
     readyAVContexts(mDirection,
         this,
         mStream,
@@ -2250,18 +2323,30 @@ StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface)
         NULL); 
     
     if (type == IPixelFormat::MEDIACODEC) { 
+      #ifdef __ANDROID__
       if (!mCodecContext->hwaccel_context && surface){  
-        #if CONFIG_HEVC_MEDIA_DECODER
-          mediacodec_alloc_context(mCodecContext, JNIHelper::sGetEnv(), surface);
-        #endif
+        mediacodec_alloc_context(mCodecContext, JNIHelper::sGetEnv(), static_cast<jobject>(surface));
       }
+      #else
+      VS_LOG_WARN("Try to use MediaCodec Android hardware type on non Android platform");
+      #endif
     } else {
       VS_LOG_WARN("Hardware context not yet supported %s", mCodecContext->hwaccel->name);
     }
   } else {
-    VS_LOG_WARN("try to set HW decoding on uninitialized AVContext");
+    VS_LOG_WARN("try to set HW decoding on uninitialized AVContext or AVStream");
   }   
   return 0;
+}
+
+jobject 
+StreamCoder::getHardwareSurface() 
+{
+    #ifdef __ANDROID__
+    return mediacodec_create_input_surface(mCodecContext, JNIHelper::sGetEnv());
+    #else
+    VS_LOG_WARN("Hardware surface not yet supported");
+    #endif
 }
 
 }

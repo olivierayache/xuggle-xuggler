@@ -150,8 +150,11 @@ namespace com { namespace xuggle { namespace xuggler
      * This method creates a StreamCoder that is tied to a specific
      * stream in a container.
      */
+    attribute_deprecated
     static StreamCoder* make(Direction direction,
         AVCodecContext *context, const AVCodec*, Stream* stream);
+    static StreamCoder* make(Direction direction,
+        AVCodecParameters *codecpar, const AVCodec*, Stream* stream);
     static StreamCoder* make(Direction direction, IStreamCoder* copyCoder);
     static StreamCoder* make(Direction direction, Codec* codec);
     static StreamCoder* make(Direction direction, ICodec::ID id);
@@ -174,6 +177,7 @@ namespace com { namespace xuggle { namespace xuggler
     virtual CodecStandardsCompliance getStandardsCompliance();
     virtual int32_t setStandardsCompliance(CodecStandardsCompliance compliance);
     virtual int32_t setHardwareDecoding(IPixelFormat::Type type, jobject surface=NULL);
+    virtual jobject getHardwareSurface();
     virtual int32_t open(IMetaData *options, IMetaData* unsetOptions);
     virtual int32_t setProperty(IMetaData* valuesToSet, IMetaData* valuesNotFound);
 
@@ -199,6 +203,7 @@ namespace com { namespace xuggle { namespace xuggler
 
     com::xuggle::ferry::RefPointer<com::xuggle::ferry::IBuffer> mAudioFrameBuffer;
     int32_t mBytesInFrameBuffer;
+    int64_t mPtsOfFrameBuffer;
     int64_t mStartingTimestampOfBytesInFrameBuffer;
     int32_t mDefaultAudioFrameSize;
     int64_t mNumDroppedFrames;
