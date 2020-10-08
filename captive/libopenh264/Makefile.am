@@ -1,3 +1,5 @@
+#openH264 is not on configure script we provide a fake one
+export VS_CONFIGURE=$(srcdir)/configure
 include $(abs_top_builddir)/Makefile.global
 
 # This file assume the container folder contains the following files:
@@ -16,11 +18,7 @@ include $(abs_top_builddir)/Makefile.global
 # them's the breaks.
 all-local: incarcerate-package
 	@echo "Incarcerating package $(srcdir) to fake DESTDIR=$(vs_captive_prefix)"
-	@cd csrc && \
-	  ( $(MAKE) -q all || \
-	    (echo "Out of date files; re-running make" && $(MAKE) all && \
-	     DESTDIR="$(vs_captive_prefix)" $(MAKE) install) \
-	)
+	cd csrc && $(MAKE) -f ../$(srcdir)/csrc/Makefile ARCH=$(host_cpu) DESTDIR=$(vs_captive_prefix) install-static
 	@echo "Incarceration complete: $(srcdir)"
 
 dist-hook:
