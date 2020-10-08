@@ -202,6 +202,25 @@ namespace com { namespace xuggle { namespace xuggler
         IContainerFormat* pContainerFormat,
         bool aStreamsCanBeAddedDynamically,
         bool aQueryStreamMetaData)=0;
+    
+    /**
+     * Gets the current level of standards compliance.
+     * @return The level of standards compliance.
+     * @see CodecStandardsCompliance
+     * @since 5.7
+     */
+    virtual IStreamCoder::CodecStandardsCompliance getStandardsCompliance()=0;
+
+    /**
+     * Set the level of standards compliance.  Only paid attention to
+     * before the code is opened.
+     *
+     * @param compliance The desired compliance level to set
+     * @return 0 on success; non-zero on failure
+     * @see CodecStandardsCompliance
+     * @since 5.7
+     */
+    virtual int32_t setStandardsCompliance(IStreamCoder::CodecStandardsCompliance compliance)=0;
 
     /**
      * Returns the IContainerFormat object being used for this IContainer,
