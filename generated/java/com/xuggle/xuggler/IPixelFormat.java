@@ -16,28 +16,105 @@ import com.xuggle.ferry.*;
  * most common type of encoding used in video files I've run across.
  */
 public class IPixelFormat extends RefCounted {
-  private transient long swigCPtr;
+  // JNIHelper.swg: Start generated code
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>
+  /**
+   * This method is only here to use some references and remove
+   * a Eclipse compiler warning.
+   */
+  @SuppressWarnings("unused")
+  private void noop()
+  {
+    IBuffer.make(null, 1);
+  }
+   
+  private volatile long swigCPtr;
 
+  /**
+   * Internal Only.
+   */
   protected IPixelFormat(long cPtr, boolean cMemoryOwn) {
     super(XugglerJNI.IPixelFormat_SWIGUpcast(cPtr), cMemoryOwn);
     swigCPtr = cPtr;
   }
-
-  protected static long getCPtr(IPixelFormat obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+  
+  /**
+   * Internal Only.
+   */
+  protected IPixelFormat(long cPtr, boolean cMemoryOwn,
+      java.util.concurrent.atomic.AtomicLong ref)
+  {
+    super(XugglerJNI.IPixelFormat_SWIGUpcast(cPtr),
+     cMemoryOwn, ref);
+    swigCPtr = cPtr;
+  }
+    
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that obj is proxying for.
+   *   
+   * @param obj The java proxy object for a native object.
+   * @return The raw pointer obj is proxying for.
+   */
+  public static long getCPtr(IPixelFormat obj) {
+    if (obj == null) return 0;
+    return obj.getMyCPtr();
   }
 
-  public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        throw new UnsupportedOperationException("C++ destructor does not have public access");
-      }
-      swigCPtr = 0;
-    }
-    super.delete();
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that we're proxying for.
+   *   
+   * @return The raw pointer we're proxying for.
+   */  
+  public long getMyCPtr() {
+    if (swigCPtr == 0) throw new IllegalStateException("underlying native object already deleted");
+    return swigCPtr;
+  }
+  
+  /**
+   * Create a new IPixelFormat object that is actually referring to the
+   * exact same underlying native object.
+   *
+   * @return the new Java object.
+   */
+  @Override
+  public IPixelFormat copyReference() {
+    if (swigCPtr == 0)
+      return null;
+    else
+      return new IPixelFormat(swigCPtr, swigCMemOwn, getJavaRefCount());
   }
 
+  /**
+   * Compares two values, returning true if the underlying objects in native code are the same object.
+   *
+   * That means you can have two different Java objects, but when you do a comparison, you'll find out
+   * they are the EXACT same object.
+   *
+   * @return True if the underlying native object is the same.  False otherwise.
+   */
+  public boolean equals(Object obj) {
+    boolean equal = false;
+    if (obj instanceof IPixelFormat)
+      equal = (((IPixelFormat)obj).swigCPtr == this.swigCPtr);
+    return equal;
+  }
+  
+  /**
+   * Get a hashable value for this object.
+   *
+   * @return the hashable value.
+   */
+  public int hashCode() {
+     return (int)swigCPtr;
+  }
+  
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<
+  // JNIHelper.swg: End generated code
+  
 
 
   /**

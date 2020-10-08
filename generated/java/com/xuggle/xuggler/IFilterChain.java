@@ -130,16 +130,32 @@ public class IFilterChain extends RefCounted {
   /**
    * @return a new source for this chain
    */
+  public IBufferSource createSource(IAudioSamples.Format format, int channels, int sample_rate, IRational time_base, IAudioSamples.ChannelLayout channel_layout) {
+    long cPtr = XugglerJNI.IFilterChain_createSource__SWIG_0(swigCPtr, this, format.swigValue(), channels, sample_rate, IRational.getCPtr(time_base), time_base, channel_layout.swigValue());
+    return (cPtr == 0) ? null : new IBufferSource(cPtr, false);
+  }
+
+  /**
+   * @return a new source for this chain
+   */
   public IBufferSource createSource(IAudioSamples.Format format, int channels, int sample_rate, IRational time_base) {
-    long cPtr = XugglerJNI.IFilterChain_createSource(swigCPtr, this, format.swigValue(), channels, sample_rate, IRational.getCPtr(time_base), time_base);
+    long cPtr = XugglerJNI.IFilterChain_createSource__SWIG_1(swigCPtr, this, format.swigValue(), channels, sample_rate, IRational.getCPtr(time_base), time_base);
     return (cPtr == 0) ? null : new IBufferSource(cPtr, false);
   }
 
   /**
    * @return a new sink for this chain
    */
+  public IBufferSink createSink(IAudioSamples.ChannelLayout channel_layout) {
+    long cPtr = XugglerJNI.IFilterChain_createSink__SWIG_0(swigCPtr, this, channel_layout.swigValue());
+    return (cPtr == 0) ? null : new IBufferSink(cPtr, false);
+  }
+
+  /**
+   * @return a new sink for this chain
+   */
   public IBufferSink createSink() {
-    long cPtr = XugglerJNI.IFilterChain_createSink(swigCPtr, this);
+    long cPtr = XugglerJNI.IFilterChain_createSink__SWIG_1(swigCPtr, this);
     return (cPtr == 0) ? null : new IBufferSink(cPtr, false);
   }
 
@@ -150,6 +166,15 @@ public class IFilterChain extends RefCounted {
    */
   public int configure() {
     return XugglerJNI.IFilterChain_configure(swigCPtr, this);
+  }
+
+  /**
+   * Clears this filter chain by removing all filters<br>
+   * <br>
+   * @return 0 on success
+   */
+  public int clear() {
+    return XugglerJNI.IFilterChain_clear(swigCPtr, this);
   }
 
 }

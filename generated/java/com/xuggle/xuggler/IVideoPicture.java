@@ -16,28 +16,105 @@ import com.xuggle.ferry.*;
  * </p>
  */
 public class IVideoPicture extends IMediaData {
-  private transient long swigCPtr;
+  // JNIHelper.swg: Start generated code
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>
+  /**
+   * This method is only here to use some references and remove
+   * a Eclipse compiler warning.
+   */
+  @SuppressWarnings("unused")
+  private void noop()
+  {
+    IBuffer.make(null, 1);
+  }
+   
+  private volatile long swigCPtr;
 
+  /**
+   * Internal Only.
+   */
   protected IVideoPicture(long cPtr, boolean cMemoryOwn) {
     super(XugglerJNI.IVideoPicture_SWIGUpcast(cPtr), cMemoryOwn);
     swigCPtr = cPtr;
   }
-
-  protected static long getCPtr(IVideoPicture obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+  
+  /**
+   * Internal Only.
+   */
+  protected IVideoPicture(long cPtr, boolean cMemoryOwn,
+      java.util.concurrent.atomic.AtomicLong ref)
+  {
+    super(XugglerJNI.IVideoPicture_SWIGUpcast(cPtr),
+     cMemoryOwn, ref);
+    swigCPtr = cPtr;
+  }
+    
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that obj is proxying for.
+   *   
+   * @param obj The java proxy object for a native object.
+   * @return The raw pointer obj is proxying for.
+   */
+  public static long getCPtr(IVideoPicture obj) {
+    if (obj == null) return 0;
+    return obj.getMyCPtr();
   }
 
-  public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        throw new UnsupportedOperationException("C++ destructor does not have public access");
-      }
-      swigCPtr = 0;
-    }
-    super.delete();
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that we're proxying for.
+   *   
+   * @return The raw pointer we're proxying for.
+   */  
+  public long getMyCPtr() {
+    if (swigCPtr == 0) throw new IllegalStateException("underlying native object already deleted");
+    return swigCPtr;
+  }
+  
+  /**
+   * Create a new IVideoPicture object that is actually referring to the
+   * exact same underlying native object.
+   *
+   * @return the new Java object.
+   */
+  @Override
+  public IVideoPicture copyReference() {
+    if (swigCPtr == 0)
+      return null;
+    else
+      return new IVideoPicture(swigCPtr, swigCMemOwn, getJavaRefCount());
   }
 
+  /**
+   * Compares two values, returning true if the underlying objects in native code are the same object.
+   *
+   * That means you can have two different Java objects, but when you do a comparison, you'll find out
+   * they are the EXACT same object.
+   *
+   * @return True if the underlying native object is the same.  False otherwise.
+   */
+  public boolean equals(Object obj) {
+    boolean equal = false;
+    if (obj instanceof IVideoPicture)
+      equal = (((IVideoPicture)obj).swigCPtr == this.swigCPtr);
+    return equal;
+  }
+  
+  /**
+   * Get a hashable value for this object.
+   *
+   * @return the hashable value.
+   */
+  public int hashCode() {
+     return (int)swigCPtr;
+  }
+  
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<
+  // JNIHelper.swg: End generated code
+  
 
   /**
    * info about this packet
@@ -223,8 +300,18 @@ public class IVideoPicture extends IMediaData {
    * {com.xuggle.xuggler.IStreamCoder#setHardwareDecoding(IPixelFormat.Type, Object)} <br>
    * must be called before opening decoder. 
    */
+  public void render(long timeStamp) {
+    XugglerJNI.IVideoPicture_render__SWIG_0(swigCPtr, this, timeStamp);
+  }
+
+  /**
+   * Render this picture on configured surface. <br>
+   * Works only with HW accelerated {com.xuggle.xuggler.IPixelFormat}.<br>
+   * {com.xuggle.xuggler.IStreamCoder#setHardwareDecoding(IPixelFormat.Type, Object)} <br>
+   * must be called before opening decoder. 
+   */
   public void render() {
-    XugglerJNI.IVideoPicture_render(swigCPtr, this);
+    XugglerJNI.IVideoPicture_render__SWIG_1(swigCPtr, this);
   }
 
   /**
@@ -290,6 +377,10 @@ public class IVideoPicture extends IMediaData {
    */
   public void setPictureType(IVideoPicture.PictType type) {
     XugglerJNI.IVideoPicture_setPictureType(swigCPtr, this, type.swigValue());
+  }
+
+  public void setSideData(IVideoPicture.FrameDataType type, IBuffer buffer) {
+    XugglerJNI.IVideoPicture_setSideData(swigCPtr, this, type.swigValue(), IBuffer.getCPtr(buffer), buffer);
   }
 
   /**
@@ -361,6 +452,138 @@ public class IVideoPicture extends IMediaData {
 
     @SuppressWarnings("unused")
     private PictType(PictType swigEnum) {
+      this.swigValue = swigEnum.swigValue;
+      SwigNext.next = this.swigValue+1;
+    }
+
+    private final int swigValue;
+
+    private static class SwigNext {
+      private static int next = 0;
+    }
+  }
+
+  public enum FrameDataType {
+    /**
+     * The data is the AVPanScan struct defined in libavcodec.
+     */
+    AV_FRAME_DATA_PANSCAN,
+    /**
+     * ATSC A53 Part 4 Closed Captions.<br>
+     * A53 CC bitstream is stored as uint8_t in AVFrameSideData.data.<br>
+     * The number of bytes of CC data is AVFrameSideData.size.
+     */
+    AV_FRAME_DATA_A53_CC,
+    /**
+     * Stereoscopic 3d metadata.<br>
+     * The data is the AVStereo3D struct defined in libavutil/stereo3d.h.
+     */
+    AV_FRAME_DATA_STEREO3D,
+    /**
+     * The data is the AVMatrixEncoding enum defined in libavutil/channel_layout.h.
+     */
+    AV_FRAME_DATA_MATRIXENCODING,
+    /**
+     * Metadata relevant to a downmix procedure.<br>
+     * The data is the AVDownmixInfo struct defined in libavutil/downmix_info.h.
+     */
+    AV_FRAME_DATA_DOWNMIX_INFO,
+    /**
+     * ReplayGain information in the form of the AVReplayGain struct.
+     */
+    AV_FRAME_DATA_REPLAYGAIN,
+    /**
+     * This side data contains a 3x3 transformation matrix describing an affine<br>
+     * transformation that needs to be applied to the frame for correct<br>
+     * presentation.<br>
+     * <br>
+     * See libavutil/display.h for a detailed description of the data.
+     */
+    AV_FRAME_DATA_DISPLAYMATRIX,
+    /**
+     * Active Format Description data consisting of a single byte as specified<br>
+     * in ETSI TS 101 154 using AVActiveFormatDescription enum.
+     */
+    AV_FRAME_DATA_AFD,
+    /**
+     * Motion vectors exported by some codecs (on demand through the export_mvs<br>
+     * flag set in the libavcodec AVCodecContext flags2 option).<br>
+     * The data is the AVMotionVector struct defined in<br>
+     * libavutil/motion_vector.h.
+     */
+    AV_FRAME_DATA_MOTION_VECTORS,
+    /**
+     * Recommmends skipping the specified number of samples. This is exported<br>
+     * only if the "skip_manual" AVOption is set in libavcodec.<br>
+     * This has the same format as AV_PKT_DATA_SKIP_SAMPLES.<br>
+     * {@code 
+    u32le number of samples to skip from start of this packet
+    u32le number of samples to skip from end of this packet
+    u8    reason for start skip
+    u8    reason for end   skip (0=padding silence, 1=convergence)
+    }
+     */
+    AV_FRAME_DATA_SKIP_SAMPLES,
+    /**
+     * This side data must be associated with an audio frame and corresponds to<br>
+     * enum AVAudioServiceType defined in avcodec.h.
+     */
+    AV_FRAME_DATA_AUDIO_SERVICE_TYPE,
+    /**
+     * Mastering display metadata associated with a video frame. The payload is<br>
+     * an AVMasteringDisplayMetadata type and contains information about the<br>
+     * mastering display color volume.
+     */
+    AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
+    /**
+     * The GOP timecode in 25 bit timecode format. Data format is 64-bit integer.<br>
+     * This is set on the first frame of a GOP that has a temporal reference of 0.
+     */
+    AV_FRAME_DATA_GOP_TIMECODE,
+    /**
+     * The data represents the AVSphericalMapping structure defined in<br>
+     * libavutil/spherical.h.
+     */
+    AV_FRAME_DATA_SPHERICAL,
+    /**
+     * Content light level (based on CTA-861.3). This payload contains data in<br>
+     * the form of the AVContentLightMetadata struct.
+     */
+    AV_FRAME_DATA_CONTENT_LIGHT_LEVEL,
+    /**
+     * The data contains an ICC profile as an opaque octet buffer following the<br>
+     * format described by ISO 15076-1 with an optional name defined in the<br>
+     * metadata key entry "name".
+     */
+    AV_FRAME_DATA_ICC_PROFILE;
+
+    public final int swigValue() {
+      return swigValue;
+    }
+
+    public static FrameDataType swigToEnum(int swigValue) {
+      FrameDataType[] swigValues = FrameDataType.class.getEnumConstants();
+      if (swigValue < swigValues.length && swigValue >= 0 && swigValues[swigValue].swigValue == swigValue)
+        return swigValues[swigValue];
+      for (FrameDataType swigEnum : swigValues)
+        if (swigEnum.swigValue == swigValue)
+          return swigEnum;
+      throw new IllegalArgumentException("No enum " + FrameDataType.class + " with value " + swigValue);
+    }
+
+    @SuppressWarnings("unused")
+    private FrameDataType() {
+      this.swigValue = SwigNext.next++;
+    }
+
+    @SuppressWarnings("unused")
+    private FrameDataType(int swigValue) {
+      this.swigValue = swigValue;
+      SwigNext.next = swigValue+1;
+    }
+
+    @SuppressWarnings("unused")
+    private FrameDataType(FrameDataType swigEnum) {
       this.swigValue = swigEnum.swigValue;
       SwigNext.next = this.swigValue+1;
     }

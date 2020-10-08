@@ -14,28 +14,105 @@ import com.xuggle.ferry.*;
  * that data.
  */
 public class IStreamCoder extends RefCounted implements com.xuggle.xuggler.IConfigurable {
-  private transient long swigCPtr;
+  // JNIHelper.swg: Start generated code
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>
+  /**
+   * This method is only here to use some references and remove
+   * a Eclipse compiler warning.
+   */
+  @SuppressWarnings("unused")
+  private void noop()
+  {
+    IBuffer.make(null, 1);
+  }
+   
+  private volatile long swigCPtr;
 
+  /**
+   * Internal Only.
+   */
   protected IStreamCoder(long cPtr, boolean cMemoryOwn) {
     super(XugglerJNI.IStreamCoder_SWIGUpcast(cPtr), cMemoryOwn);
     swigCPtr = cPtr;
   }
-
-  protected static long getCPtr(IStreamCoder obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+  
+  /**
+   * Internal Only.
+   */
+  protected IStreamCoder(long cPtr, boolean cMemoryOwn,
+      java.util.concurrent.atomic.AtomicLong ref)
+  {
+    super(XugglerJNI.IStreamCoder_SWIGUpcast(cPtr),
+     cMemoryOwn, ref);
+    swigCPtr = cPtr;
+  }
+    
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that obj is proxying for.
+   *   
+   * @param obj The java proxy object for a native object.
+   * @return The raw pointer obj is proxying for.
+   */
+  public static long getCPtr(IStreamCoder obj) {
+    if (obj == null) return 0;
+    return obj.getMyCPtr();
   }
 
-  public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        throw new UnsupportedOperationException("C++ destructor does not have public access");
-      }
-      swigCPtr = 0;
-    }
-    super.delete();
+  /**
+   * Internal Only.  Not part of public API.
+   *
+   * Get the raw value of the native object that we're proxying for.
+   *   
+   * @return The raw pointer we're proxying for.
+   */  
+  public long getMyCPtr() {
+    if (swigCPtr == 0) throw new IllegalStateException("underlying native object already deleted");
+    return swigCPtr;
+  }
+  
+  /**
+   * Create a new IStreamCoder object that is actually referring to the
+   * exact same underlying native object.
+   *
+   * @return the new Java object.
+   */
+  @Override
+  public IStreamCoder copyReference() {
+    if (swigCPtr == 0)
+      return null;
+    else
+      return new IStreamCoder(swigCPtr, swigCMemOwn, getJavaRefCount());
   }
 
+  /**
+   * Compares two values, returning true if the underlying objects in native code are the same object.
+   *
+   * That means you can have two different Java objects, but when you do a comparison, you'll find out
+   * they are the EXACT same object.
+   *
+   * @return True if the underlying native object is the same.  False otherwise.
+   */
+  public boolean equals(Object obj) {
+    boolean equal = false;
+    if (obj instanceof IStreamCoder)
+      equal = (((IStreamCoder)obj).swigCPtr == this.swigCPtr);
+    return equal;
+  }
+  
+  /**
+   * Get a hashable value for this object.
+   *
+   * @return the hashable value.
+   */
+  public int hashCode() {
+     return (int)swigCPtr;
+  }
+  
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<
+  // JNIHelper.swg: End generated code
+  
 
   /**
    * Returns the fourcc tag, in order of least significant byte
@@ -1143,6 +1220,10 @@ public class IStreamCoder extends RefCounted implements com.xuggle.xuggler.IConf
    */
   public int setHardwareDecoding(IPixelFormat.Type type) {
     return XugglerJNI.IStreamCoder_setHardwareDecoding__SWIG_1(swigCPtr, this, type.swigValue());
+  }
+
+  public java.lang.Object getHardwareSurface() {
+    return XugglerJNI.IStreamCoder_getHardwareSurface(swigCPtr, this);
   }
 
   /**
