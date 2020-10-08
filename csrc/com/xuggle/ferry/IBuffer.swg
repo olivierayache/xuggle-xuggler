@@ -43,13 +43,13 @@
    *
    */ 
   public $javaclassname(long ignore1, boolean ignore2) {
-    super($imclassname.SWIG$javaclassnameUpcast(ignore1), ignore2);
+    super($imclassname.$javaclassname_SWIGUpcast(ignore1), ignore2);
     swigCPtr = ignore1;
   }
   protected $javaclassname(long cPtr, boolean cMemoryOwn,
       java.util.concurrent.atomic.AtomicLong ref)
   {
-    super($imclassname.SWIG$javaclassnameUpcast(cPtr),
+    super($imclassname.$javaclassname_SWIGUpcast(cPtr),
      cMemoryOwn, ref);
     swigCPtr = cPtr;
   }

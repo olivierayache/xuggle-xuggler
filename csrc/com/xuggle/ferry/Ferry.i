@@ -79,7 +79,7 @@ Java_com_xuggle_ferry_Ferry_init(JNIEnv *env, jclass)
 %}
 
 
-#ifdef KOTLINJAVA
+#ifdef SWIGJAVA
 %pragma(java) jniclasscode=%{
   static {
     JNILibrary library = new JNILibrary("xuggle",

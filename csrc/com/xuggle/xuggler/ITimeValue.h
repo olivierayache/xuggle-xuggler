@@ -89,7 +89,7 @@ public:
 
   /**
    * Convenience method that calls a.compareTo(b).
-   * @see #compareTo(ITimeValue)
+   * @see #compareTo
    * @param a first value.
    * @param b second value.
    * @return -1 if a < b; +1 if a > b; 0 otherwise

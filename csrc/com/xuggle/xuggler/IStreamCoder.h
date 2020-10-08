@@ -367,7 +367,7 @@ namespace com { namespace xuggle { namespace xuggler
      * @param channels The number of channels we'll encode with.
      */
     virtual void setChannels(int32_t channels)=0;
-
+    
 
     /**
      * For this stream, get the number of audio samples that are
@@ -1001,7 +1001,7 @@ namespace com { namespace xuggle { namespace xuggler
      */
     virtual int32_t setStandardsCompliance(CodecStandardsCompliance compliance)=0;
 
-#ifdef SWIGJAVA
+//    #ifndef SWIG
     /**
      * Try to change current decoder to an HW decoder compatible with
      * pixel format
@@ -1010,7 +1010,10 @@ namespace com { namespace xuggle { namespace xuggler
      * @return 0 on success; non-zero on failure
      */
     virtual int32_t setHardwareDecoding(IPixelFormat::Type type, jobject surface=NULL)=0;
-#endif    
+    
+    virtual jobject getHardwareSurface()=0;
+
+//    #endif    
     /**
      * Open the codec with the given options.
      *
