@@ -551,6 +551,7 @@ OBJS-$(CONFIG_LIBOPENMPT_DEMUXER)        += libopenmpt.o
 OBJS-$(CONFIG_LIBRTMP)                   += librtmp.o
 OBJS-$(CONFIG_LIBSSH_PROTOCOL)           += libssh.o
 OBJS-$(CONFIG_LIBSMBCLIENT_PROTOCOL)     += libsmbclient.o
+OBJS-$(CONFIG_LIBSRT_PROTOCOL)           += libsrt.o
 
 # protocols I/O
 OBJS-$(CONFIG_ASYNC_PROTOCOL)            += async.o

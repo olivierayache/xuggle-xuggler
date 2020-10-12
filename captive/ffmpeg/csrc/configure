@@ -259,6 +259,7 @@ External library support:
   --enable-libsoxr         enable Include libsoxr resampling [no]
   --enable-libspeex        enable Speex de/encoding via libspeex [no]
   --enable-libssh          enable SFTP protocol via libssh [no]
+  --enable-libsrt          enable Haivision SRT protocol via libsrt [no]
   --enable-libtesseract    enable Tesseract, needed for ocr filter [no]
   --enable-libtheora       enable Theora encoding via libtheora [no]
   --enable-libtwolame      enable MP2 encoding via libtwolame [no]
@@ -1623,6 +1624,7 @@ EXTERNAL_LIBRARY_LIST="
     libsoxr
     libspeex
     libssh
+    libsrt
     libtesseract
     libtheora
     libtwolame
@@ -3152,6 +3154,8 @@ librtmpt_protocol_deps="librtmp"
 librtmpte_protocol_deps="librtmp"
 libsmbclient_protocol_deps="libsmbclient gplv3"
 libssh_protocol_deps="libssh"
+libsrt_protocol_deps="libsrt"
+libsrt_protocol_select="network"
 mmsh_protocol_select="http_protocol"
 mmst_protocol_select="network"
 rtmp_protocol_conflict="librtmp_protocol"
@@ -5961,7 +5965,7 @@ enabled libopencv         && { check_header opencv2/core/core_c.h &&
                                { use_pkg_config libopencv opencv opencv2/core/core_c.h cvCreateImageHeader ||
                                  require opencv opencv2/core/core_c.h cvCreateImageHeader -lopencv_core -lopencv_imgproc; } ||
                                require_pkg_config libopencv opencv opencv/cxcore.h cvCreateImageHeader; }
-enabled libopenh264       && require_pkg_config libopenh264 openh264 wels/codec_api.h WelsGetCodecVersion
+enabled libopenh264       && require_pkg_config libopenh264 openh264 wels/codec_api.h WelsGetCodecVersion -lstdc++
 enabled libopenjpeg       && { { check_lib libopenjpeg openjpeg-2.3/openjpeg.h opj_version -lopenjp2 -DOPJ_STATIC && add_cppflags -DOPJ_STATIC; } ||
                                check_lib libopenjpeg openjpeg-2.3/openjpeg.h opj_version -lopenjp2 ||
                                { check_lib libopenjpeg openjpeg-2.2/openjpeg.h opj_version -lopenjp2 -DOPJ_STATIC && add_cppflags -DOPJ_STATIC; } ||
@@ -5991,6 +5995,7 @@ enabled libsmbclient      && { use_pkg_config libsmbclient smbclient libsmbclien
 enabled libsnappy         && require libsnappy snappy-c.h snappy_compress -lsnappy
 enabled libsoxr           && require libsoxr soxr.h soxr_create -lsoxr && LIBSOXR="-lsoxr"
 enabled libssh            && require_pkg_config libssh libssh libssh/sftp.h sftp_init
+enabled libsrt            && require_pkg_config libsrt "srt >= 1.3.0" srt/srt.h srt_socket -lstdc++
 enabled libspeex          && require_pkg_config libspeex speex speex/speex.h speex_decoder_init -lspeex
 enabled libtesseract      && require_pkg_config libtesseract tesseract tesseract/capi.h TessBaseAPICreate
 enabled libtheora         && require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
