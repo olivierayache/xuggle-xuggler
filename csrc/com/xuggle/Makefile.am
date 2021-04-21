@@ -40,15 +40,20 @@ libxuggle_la_LDFLAGS+= \
 	-Wl,-Bsymbolic \
 	-Wl,--warn-common \
 	-Wl,--as-needed \
-	-XCClinker -lgcc \
-	-XCClinker -lmingw32 \
-	-XCClinker -lmoldname \
-	-XCClinker -lmingwex \
-	-XCClinker -lmsvcrt \
-	-XCClinker -ladvapi32 \
-	-XCClinker -lshell32 \
-	-XCClinker -luser32 \
-	-XCClinker -lkernel32
+        -nostdlib -static-libtool-libs \
+	-Wl,-Bstatic,-lstdc++ \
+	-Wl,-Bstatic,-lgcc \
+	-Wl,-Bstatic,-lgcc_eh \
+	-Wl,-Bstatic,-lgcc_s \
+        -Wl,-Bstatic,-lpthread \
+        -XCClinker -lmoldname \
+        -XCClinker -lmingwex \
+        -XCClinker -lmingw32 \
+        -XCClinker -lmsvcrt \
+        -XCClinker -ladvapi32 \
+        -XCClinker -lshell32 \
+        -XCClinker -luser32 \
+        -XCClinker -lkernel32
 else
 if VS_OS_LINUX
 libxuggle_la_LDFLAGS+= \
@@ -57,6 +62,10 @@ else
 if VS_OS_ANDROID
 libxuggle_la_LDFLAGS+= \
 	-nostdlib -static-libtool-libs -Wl,-Bstatic,-lstdc++ -XCClinker -lgcc
+else
+if VS_OS_MAC
+libxuggle_la_LDFLAGS+= \
+	-nostdlib -static-libtool-libs
 else
 libxuggle_la_LDFLAGS+= \
 	-nostdlib -static-libtool-libs -XCClinker -static-libgcc

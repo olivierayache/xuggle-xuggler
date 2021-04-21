@@ -28,7 +28,7 @@ case $HOST_OS in
   *darwin*)
     case $HOST_OS in
       *x86_64*)
-      OPENSSL_CONFIG=darwin64-x86_64-cc
+      OPENSSL_CONFIG=darwin64-x86_64-cc -fPIC -Wa,--noexecstack
       ;;
       *ppc*)
       OPENSSL_CONFIG=darwin-ppc-cc
@@ -41,10 +41,10 @@ case $HOST_OS in
   *linux*)
     case $HOST_OS in
       *x86_64*)
-      OPENSSL_CONFIG=linux-x86_64
+      OPENSSL_CONFIG=linux-x86_64 -fPIC -Wa,--noexecstack
       ;;
       *)
-      OPENSSL_CONFIG=linux-generic32
+      OPENSSL_CONFIG=linux-generic32 -fPIC -Wa,--noexecstack 
       ;;
     esac
   ;;
@@ -70,8 +70,7 @@ CPPFLAGS="@CPPFLAGS@" \
 CXXFLAGS="@CXXFLAGS@" \
 ASFLAGS="@ASFLAGS@" \
 PATH="$PATH:@abs_top_builddir@@bindir@@" sh "@abs_builddir@/csrc/Configure" \
-  ${OPENSSL_CONFIG} $CFLAGS no-shared no-md2 no-rc5 zlib -fPIC \
-  -Wa,--noexecstack \
+  ${OPENSSL_CONFIG} no-shared no-md2 no-rc5 zlib \
   --cross-compile-prefix="${CROSS_COMPILE}" \
   --openssldir=${prefix} \
   --with-zlib-include="@abs_top_builddir@/stage@includedir@" \
