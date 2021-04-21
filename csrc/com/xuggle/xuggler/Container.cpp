@@ -102,6 +102,8 @@ namespace com { namespace xuggle { namespace xuggler
   Container :: Container()
   {
     VS_LOG_TRACE("Making container: %p", this);
+    mPacket = av_packet_alloc();
+    mBsfPacket = av_packet_alloc();
     mFormatContext = avformat_alloc_context();
     if (!mFormatContext)
       throw std::bad_alloc();
@@ -121,6 +123,12 @@ namespace com { namespace xuggle { namespace xuggler
   {
     reset();
     resetContext();
+    if (mPacket) {
+        av_packet_free(&mPacket);
+    }
+    if (mBsfPacket) {
+        av_packet_free(&mBsfPacket);
+    }
     VS_LOG_TRACE("Destroyed container: %p", this);
   }
 
@@ -238,6 +246,10 @@ namespace com { namespace xuggle { namespace xuggler
 
     if (pContainerFormat)
       setFormat(pContainerFormat);
+    
+    // Set up thread interrupt handling.
+    mFormatContext->interrupt_callback.callback = Global::avioInterruptCB;
+    mFormatContext->interrupt_callback.opaque = this;
 
     // Let's check for custom IO
     mCustomIOHandler = URLProtocolManager::findHandler(
@@ -449,7 +461,7 @@ namespace com { namespace xuggle { namespace xuggler
            retval = queryStreamMetaData();
         }
       } else {
-        VS_LOG_DEBUG("Could not open output url: %s", url);
+        VS_LOG_DEBUG("Could not open input url: %s", url);
       }
     } catch (std::exception &e) {
       if (retval >= 0)
@@ -510,14 +522,16 @@ namespace com { namespace xuggle { namespace xuggler
       if (retval < 0)
         throw std::runtime_error("could not set options");
       
-      if (mCustomIOHandler)
+      if (mCustomIOHandler) {
         retval = mCustomIOHandler->url_open(url, URLProtocolHandler::URL_WRONLY_MODE);
-      else
+    } else {
+          VS_LOG_ERROR("avio_open2");
         retval = avio_open2(&mFormatContext->pb,
-            url, AVIO_FLAG_WRITE,
+            url, AVIO_FLAG_READ_WRITE,
             &mFormatContext->interrupt_callback,
             options
         );
+    }
       if (retval < 0)
         throw std::runtime_error("could not open file");
 
@@ -650,25 +664,40 @@ namespace com { namespace xuggle { namespace xuggler
     Packet* pkt = dynamic_cast<Packet*>(ipkt);
     if (mFormatContext && pkt)
     {
-//      AVPacket tmpPacket;
-      AVPacket packet;
-//
-//      packet = &tmpPacket;
-      av_init_packet(&packet);
+    
+    bool useBsf = false;
+                
 //      pkt->reset();
       int32_t numReads=0;
       do
       {
         retval = av_read_frame(mFormatContext,
-            &packet);
+            mPacket);
         ++numReads;
+        
+        if (retval == 0) {
+            Stream* stream = this->getStream(mPacket->stream_index);
+            AVBSFContext* bsfContext = stream->getAVBsfContext();
+            VS_REF_RELEASE(stream);
+            if (bsfContext) {
+                useBsf = true;
+                if (retval = av_bsf_send_packet(bsfContext, mPacket) == 0) {
+                    retval = av_bsf_receive_packet(bsfContext, mBsfPacket);
+                }
+            } 
+        }
       }
       while (retval == AVERROR(EAGAIN) &&
           (mReadRetryCount < 0 || numReads <= mReadRetryCount));
 
-      if (retval >= 0)
-        pkt->wrapAVPacket(&packet);
-        av_packet_unref(&packet);
+      if (retval >= 0) 
+        if (!useBsf) {
+          pkt->wrapAVPacket(mPacket);    
+        } else {
+          pkt->wrapAVPacket(mBsfPacket);
+        }
+        av_packet_unref(mPacket);
+        av_packet_unref(mBsfPacket);
 
 //      // Get a pointer to the wrapped packet
 //      packet = pkt->getAVPacket();

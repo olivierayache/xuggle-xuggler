@@ -246,8 +246,8 @@ namespace com { namespace xuggle { namespace xuggler
      *
      * @return >= 0 on success; < 0 on error.
      */
-    virtual int32_t close()=0;
-
+    virtual int32_t close(bool dangling=false)=0;
+    
     /**
      * Find out the type of this container.
      *
@@ -665,7 +665,9 @@ namespace com { namespace xuggle { namespace xuggler
       FLAG_SORT_DTS=0x10000,
       FLAG_PRIV_OPT=0x20000, 
       FLAG_KEEP_SIDE_DATA=0x40000, 
-      FLAG_FAST_SEEK=0x80000
+      FLAG_FAST_SEEK=0x80000,
+      FLAG_SHORTEST=0x100000,
+      FLAG_AUTO_BSF=0x200000
     } Flags;
     
     /**

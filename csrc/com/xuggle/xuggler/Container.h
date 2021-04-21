@@ -154,6 +154,8 @@ namespace com { namespace xuggle { namespace xuggler
     int32_t openOutputURL(const char*url, bool, AVDictionary **options);
     int32_t setupAllInputStreams();
     AVFormatContext *mFormatContext;
+    AVPacket *mPacket;
+    AVPacket *mBsfPacket;
     void reset();
     void resetContext();
     // We do pointer to RefPointers to avoid too many
