@@ -22,8 +22,10 @@
  */
 
 #include <srt/srt.h>
-#include <sys/syslog.h>
+//#include <sys/syslog.h>
 #include <string.h>
+#include <libavutil/log.h>
+#include <libavutil/error.h>
 
 #include "libavutil/avassert.h"
 #include "libavutil/opt.h"
@@ -55,6 +57,7 @@ enum SRTMode {
 typedef struct SRTContext {
     const AVClass *class;
     int fd;
+    int listen_fd;
     int eid;
     int64_t rw_timeout;
     int64_t listen_timeout;
@@ -351,11 +354,8 @@ static int libsrt_network_wait_fd(URLContext *h, int eid, int fd, int write)
     SYSSOCKET sready[1];
     SYSSOCKET serror[1];
     
-    SRT_EPOLL_EVENT* epoll_events;
     
     SRTContext *s = h->priv_data;
-
-    printf("SRT state %d %d \n",srt_getsockstate(fd),fd);
     
     if (srt_epoll_add_usock(eid, fd, &modes) < 0){
         return libsrt_neterrno(h);
@@ -366,20 +366,28 @@ static int libsrt_network_wait_fd(URLContext *h, int eid, int fd, int write)
         ret = srt_epoll_wait(eid, ready, &len, error, &errlen, POLLING_TIME, sready, &slen, serror, &serrlen);
     }
     if (ret < 0) {
-        if (write && s->auto_reconnect){
+        if (s->auto_reconnect){
+            
             SRT_SOCKSTATUS state = srt_getsockstate(fd);
-            printf( "SRT get status fd %d (SRT status: %d)\n", fd, state);
+            
             switch (state) {
                 case SRTS_BROKEN:
                 case SRTS_NONEXIST:
                 case SRTS_CLOSED:
-                    printf("SRT socket broken, client will try to auto reconnect fd %d (SRT status: %d)\n", fd, state);
-                    srt_epoll_remove_usock(eid, fd);
-                    ret = libsrt_reconnect(h, h->flags);
-                    printf("Reconnect %d \n", ret);
-                    if (ret >= 0) {
-                        ret = AVERROR(EAGAIN);
-                        return ret;
+
+                    if (write) {
+                        av_log(h, AV_LOG_WARNING, "SRT socket broken, client will try to auto reconnect fd %d (SRT status: %d)\n", fd, state);
+                        srt_epoll_remove_usock(eid, fd);
+                        ret = libsrt_reconnect(h, h->flags);
+                        printf("Reconnect %d \n", ret);
+                        if (ret >= 0) {
+                            ret = AVERROR(EAGAIN);
+                            return ret;
+                        }
+                    } else {
+                        av_log(h, AV_LOG_ERROR, "SRT socket broken fd %d (SRT status: %d)", fd, state);
+                        srt_epoll_remove_usock(eid, fd);
+                        return AVERROR(EIO);
                     }
             }
         }
@@ -390,19 +398,25 @@ static int libsrt_network_wait_fd(URLContext *h, int eid, int fd, int write)
             ret = libsrt_neterrno(h);
     } else {
         ret = errlen ? AVERROR(EIO) : 0;
-        if (write && s->auto_reconnect){
+        if (ret < 0 && write && s->auto_reconnect){
             SRT_SOCKSTATUS state = srt_getsockstate(fd);
-            printf( "SRT get status fd %d (SRT status: %d)\n", fd, state);
+            av_log(h, AV_LOG_WARNING, "SRT error with epoll wait, fd %d (SRT status: %d)\n", fd, state);
             switch (state) {
                 case SRTS_BROKEN:
                 case SRTS_NONEXIST:
                 case SRTS_CLOSED:
-                    printf("SRT socket broken, client will try to auto reconnect fd %d (SRT status: %d)\n", fd, state);
-                    srt_epoll_remove_usock(eid, fd);
-                    ret = libsrt_reconnect(h, h->flags);
-                    printf("Reconnect %d \n", ret);
-                    if (ret >= 0) {
-                        ret = AVERROR(EAGAIN);
+                    if (write) {
+                        av_log(h, AV_LOG_WARNING, "SRT socket broken, client will try to auto reconnect fd %d (SRT status: %d)\n", fd, state);
+                        srt_epoll_remove_usock(eid, fd);
+                        ret = libsrt_reconnect(h, h->flags);
+                        printf("Reconnect %d \n", ret);
+                        if (ret >= 0) {
+                            ret = AVERROR(EAGAIN);
+                            return ret;
+                        }
+                    } else {
+                        av_log(h, AV_LOG_ERROR, "SRT socket broken fd %d (SRT status: %d)", fd, state);
+                        srt_epoll_remove_usock(eid, fd);
                         return ret;
                     }
             }
@@ -448,10 +462,11 @@ static int libsrt_listen(int eid, int fd, const struct sockaddr *addr, socklen_t
         return libsrt_neterrno(h);
 
     ret = srt_listen(fd, 1);
+    
     if (ret)
         return libsrt_neterrno(h);
 
-    ret = libsrt_network_wait_fd_timeout(h, eid, fd, 1, timeout, &h->interrupt_callback);
+    ret = libsrt_network_wait_fd_timeout(h, eid, fd, 0, timeout, &h->interrupt_callback);
     if (ret < 0)
         return ret;
 
@@ -467,7 +482,7 @@ static int libsrt_listen(int eid, int fd, const struct sockaddr *addr, socklen_t
 static int libsrt_listen_connect(int eid, int fd, const struct sockaddr *addr, socklen_t addrlen, int64_t timeout, URLContext *h, int will_try_next)
 {
     int ret;
-           
+    
     ret = srt_connect(fd, addr, addrlen);
     if (ret < 0)
         return libsrt_neterrno(h);
@@ -569,7 +584,8 @@ static int libsrt_setup(URLContext *h, const char *uri, int flags)
         // multi-client
         if ((ret = libsrt_listen(s->eid, fd, cur_ai->ai_addr, cur_ai->ai_addrlen, h, s->listen_timeout)) < 0)
             goto fail1;
-        fd = ret;
+        s->listen_fd = s->fd;
+        s->fd = ret;
     } else {
         if (s->mode == SRT_MODE_RENDEZVOUS) {
             ret = srt_bind(fd, cur_ai->ai_addr, cur_ai->ai_addrlen);
@@ -808,8 +824,12 @@ static int libsrt_close(URLContext *h)
         freeaddrinfo(s->ai);
     }
     
-    srt_close(s->fd);
-
+    if (s->fd>=0)
+        srt_close(s->fd);
+    
+    if (s->listen_fd>=0)
+        srt_close(s->listen_fd);
+    
     srt_epoll_release(s->eid);
 
     srt_cleanup();
