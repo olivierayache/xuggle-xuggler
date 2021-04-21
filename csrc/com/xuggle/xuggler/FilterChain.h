@@ -39,7 +39,13 @@ namespace com {
                     int sample_rate,
                     IRational* time_base,
                     IAudioSamples::ChannelLayout channel_layout);
+                virtual IBufferSource* createVideoSource(IPixelFormat::Type format,
+                    int width,
+                    int height,
+                    IRational* frame_rate,
+                    IRational* time_base);
                 virtual IBufferSink* createSink(IAudioSamples::ChannelLayout channel_layout);
+                virtual IBufferSink* createVideoSink(IPixelFormat::Type pixel_type);
                 virtual int configure();
                 virtual int clear();
                 

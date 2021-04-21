@@ -22,6 +22,7 @@
 VS_LOG_SETUP(VS_CPP_PACKAGE);
 
 using namespace std;
+using namespace com::xuggle::ferry;
 
 namespace com {
     namespace xuggle {
@@ -44,6 +45,16 @@ namespace com {
                 }
                 return make;
             }
+            
+            IBufferSink* FilterChain::createVideoSink(IPixelFormat::Type pixel_type) {
+                BufferSink* make = BufferSink::make(mFilterGraph, pixel_type);
+                if (make) {
+                    VS_REF_ACQUIRE(make);
+                    mFilters.push_back(make);
+                }
+                return make;
+            }
+
 
             IBufferSource* FilterChain::createSource(IAudioSamples::Format format,
                     int channels,
@@ -57,10 +68,28 @@ namespace com {
                 }
                 return make;
             }
+                        
+            IBufferSource* FilterChain::createVideoSource(IPixelFormat::Type format, 
+                    int width, 
+                    int height,
+                    IRational* frame_rate,
+                    IRational* time_base) {
+                BufferSource* make = BufferSource::make(mFilterGraph, format, width, height, frame_rate, time_base);
+                if (make) {
+                    VS_REF_ACQUIRE(make);
+                    mFilters.push_back(make);
+                }
+                return make;
+            }
+
 
             int FilterChain::configure() {
                 int retval = avfilter_graph_config(mFilterGraph, NULL);
                 if (retval >= 0){
+                    for (std::list<RefPointer<IMediaFilter>>::iterator it = mFilters.begin(); it != mFilters.end(); it++){
+                        MediaFilter* filter = dynamic_cast<MediaFilter*>((*it).value());
+                        filter->setReady();
+                    }
                     char* dump = avfilter_graph_dump(mFilterGraph, NULL);
                     if (dump) {
                         VS_LOG_WARN("Filter Graph configured %s", dump);
@@ -84,9 +113,13 @@ namespace com {
             FilterChain::FilterChain() {
                 mFilterGraph = avfilter_graph_alloc();
                 mFilterGraph->nb_threads = 10;
+                                VS_LOG_WARN("Filter Graph alloc %p", mFilterGraph);
+
             }
 
             FilterChain::~FilterChain() {
+                                VS_LOG_WARN("Filter Graph free %p", mFilterGraph);
+
                 avfilter_graph_free(&mFilterGraph);
                 mFilters.clear();
                 //TODO: add created IMediaFilter(s) to std::vector for Refcount to avoid GC of IMediaFilter

@@ -19,6 +19,8 @@
 #include <com/xuggle/xuggler/IRational.h>
 #include <com/xuggle/xuggler/IBufferSink.h>
 #include <com/xuggle/xuggler/MediaFilter.h>
+#include <com/xuggle/xuggler/MediaFilter.h>
+#include <com/xuggle/ferry/RefPointer.h>
 
 extern "C" {
 #include "libavfilter/avfilter.h"
@@ -34,10 +36,17 @@ namespace com {
                 VS_JNIUTILS_REFCOUNTED_OBJECT(BufferSink)
             public:
                 static BufferSink* make(AVFilterGraph*, IAudioSamples::ChannelLayout channel_layout);
+                static BufferSink* make(AVFilterGraph*, IPixelFormat::Type pixel_type);
                 virtual int getSampleRate();
                 virtual int getChannels();
+                virtual int getWidth();
+                virtual int getHeight();
+                virtual IRational* getFrameRate();
+                virtual IRational* getTimeBase();
                 virtual void setNumSamples(int frameSize);
-                virtual int fillAudioSamples(IAudioSamples* samples);               
+                virtual int fillAudioSamples(IAudioSamples* samples); 
+                virtual int fillVideoPicture(IVideoPicture* picture);
+                virtual int setReady();
 
             protected:
                 BufferSink();
@@ -47,6 +56,7 @@ namespace com {
                 int mSampleRate;
                 AVFilter* mSinkFilter;
                 AVFilterContext* mSinkFilterContext;
+                com::xuggle::ferry::RefPointer<IRational> mTimeBase;
             };
 
         }

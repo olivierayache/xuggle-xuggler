@@ -13,6 +13,7 @@
 
 #include <com/xuggle/xuggler/BufferSource.h>
 #include <com/xuggle/xuggler/AudioSamples.h>
+#include <com/xuggle/xuggler/VideoPicture.h>
 #include <com/xuggle/ferry/Logger.h>
 
 VS_LOG_SETUP(VS_CPP_PACKAGE);
@@ -23,7 +24,6 @@ extern "C" {
 #include "libavfilter/avfilter.h"
 #include "libavfilter/buffersrc.h"
 #include "libavutil/opt.h"
-#include "Global.h"
 }
 
 namespace com {
@@ -32,7 +32,7 @@ namespace com {
 
             int BufferSource::addAudioSamples(IAudioSamples* samples) {
                 int retval = -1;
-                if (!mFilterContext) {
+                if (!mFilterContext || !ready) {
                     VS_LOG_ERROR("Try to add samples to an unitialized abuffer");
                     return retval;
                 }
@@ -44,8 +44,10 @@ namespace com {
                         frame->sample_rate = inSamples->getSampleRate();
                         frame->format = inSamples->getFormat();
                         frame->channels = inSamples->getChannels();
-                        frame->channel_layout = inSamples->getChannelLayout();
-                        frame->pts = inSamples->getPts();
+                        frame->channel_layout = (uint64_t) inSamples->getChannelLayout();
+                        IRational* timeBase = inSamples->getTimeBase();
+                        frame->pts = mTimeBase->rescale(inSamples->getPts(), timeBase);
+                        VS_REF_RELEASE(timeBase);
                         int data_size = av_samples_get_buffer_size(&frame->linesize[0],
                                 frame->channels,
                                 frame->nb_samples,
@@ -68,19 +70,44 @@ namespace com {
                         av_frame_free(&frame);
                     }
                 } else {
-                    retval = av_buffersrc_write_frame(mFilterContext, NULL);
+                    retval = av_buffersrc_add_frame_flags(mFilterContext, NULL, AV_BUFFERSRC_FLAG_PUSH);
                 }
 
 
                 return retval;
             }
 
+            int BufferSource::addVideoPicture(IVideoPicture* picture) {
+                int retval = -1;
+                if (!mFilterContext || !ready) {
+                    VS_LOG_ERROR("Try to add picture to an unitialized buffer");
+                    return retval;
+                }
+                if (picture) {
+		    AVFrame* frame = av_frame_alloc();
+		    if (frame) {
+                    	VideoPicture* inPicture = dynamic_cast<VideoPicture*> (picture);
+                    	IRational* timeBase = inPicture->getTimeBase();
+                    	int64_t pts = mTimeBase->rescale(inPicture->getPts(), timeBase);
+                    	VS_REF_RELEASE(timeBase);
+                    	av_frame_ref(frame, inPicture->getAVFrame());
+			frame->pts = pts;
+			retval = av_buffersrc_add_frame(mFilterContext, frame);
+		    	av_frame_free(&frame);
+		    }
+                } else {
+                    retval = av_buffersrc_add_frame_flags(mFilterContext, NULL, AV_BUFFERSRC_FLAG_PUSH);
+                }
+
+		return retval;
+            }
+
             BufferSource::BufferSource() {
-                mFilter = avfilter_get_by_name("abuffer");
+                mTimeBase = IRational::make(1, 1000000);
             }
 
             BufferSource::~BufferSource() {
-
+                mTimeBase = NULL;
             }
 
             BufferSource* BufferSource::make(AVFilterGraph* graph, IAudioSamples::Format format,
@@ -96,6 +123,7 @@ namespace com {
                     retval = BufferSource::make();
 
                     if (retval) {
+                        retval->mFilter = avfilter_get_by_name("abuffer");
                         retval->mFilterContext = avfilter_graph_alloc_filter(graph, retval->mFilter, "abuffer");
                         if (!retval->mFilterContext) {
                             VS_REF_RELEASE(retval);
@@ -104,7 +132,7 @@ namespace com {
                             av_get_channel_layout_string(ch_layout,
                                     sizeof (ch_layout),
                                     0,
-                                    channel_layout == IAudioSamples::CH_NONE ? av_get_default_channel_layout(channels) : channel_layout);
+                                    channel_layout == IAudioSamples::ChannelLayout::CH_NONE ? av_get_default_channel_layout(channels) : (uint64_t) channel_layout);
                             av_opt_set_q(retval->mFilterContext, "time_base", (AVRational) {
                                 time_base->getNumerator(), time_base->getDenominator()
                             }, AV_OPT_SEARCH_CHILDREN);
@@ -115,6 +143,7 @@ namespace com {
                             if (avfilter_init_str(retval->mFilterContext, NULL) < 0) {
                                 VS_REF_RELEASE(retval);
                             }
+                            retval->mTimeBase.reset(time_base, true);
                             retval->mFilterGraph = graph;
                         }
                     }
@@ -122,6 +151,49 @@ namespace com {
 
                 return retval;
             }
+
+            BufferSource* BufferSource::make(AVFilterGraph* graph, IPixelFormat::Type format,
+                    int width,
+                    int height,
+                    IRational* frame_rate,
+                    IRational* time_base) {
+
+                BufferSource* retval = NULL;
+
+
+                if (width > 0 && height > 0 && time_base && frame_rate) {
+                    retval = BufferSource::make();
+
+                    if (retval) {
+                        retval->mFilter = avfilter_get_by_name("buffer");
+                        retval->mFilterContext = avfilter_graph_alloc_filter(graph, retval->mFilter, "buffer");
+                        if (!retval->mFilterContext) {
+                            VS_REF_RELEASE(retval);
+                        } else {
+                            av_opt_set_q(retval->mFilterContext, "frame_rate", (AVRational) {
+                                frame_rate->getNumerator(), frame_rate->getDenominator()
+                            }, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set_q(retval->mFilterContext, "time_base", (AVRational) {
+                                time_base->getNumerator(), time_base->getDenominator()
+                            }, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set_q(retval->mFilterContext, "pixel_aspect", (AVRational) {
+                                1, 1
+                            }, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set_int(retval->mFilterContext, "width", width, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set_int(retval->mFilterContext, "height", height, AV_OPT_SEARCH_CHILDREN);
+                            av_opt_set(retval->mFilterContext, "pix_fmt", av_get_pix_fmt_name((AVPixelFormat) format), AV_OPT_SEARCH_CHILDREN);
+                            if (avfilter_init_str(retval->mFilterContext, NULL) < 0) {
+                                VS_REF_RELEASE(retval);
+                            }
+                            retval->mTimeBase.reset(time_base, true);
+                            retval->mFilterGraph = graph;
+                        }
+                    }
+                }
+
+                return retval;
+            }
+
 
         }
     }

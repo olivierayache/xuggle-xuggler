@@ -39,6 +39,35 @@ namespace com {
                  */
                 virtual int getChannels() = 0;
                 
+
+                /**
+                 * Returns the width of output filtered picture.
+                 * 
+                 * @return the width
+                 */
+                virtual int getWidth() = 0;
+
+                /**
+                 * Returns the height of output filtered picture.
+                 * 
+                 * @return the height
+                 */
+                virtual int getHeight() = 0;
+                
+                /**
+                 * Returns the frame rate output filtered picture.
+                 * 
+                 * @return the frame rate
+                 */
+                virtual IRational* getFrameRate() = 0;
+                
+                /**
+                 * Returns the frame rate output filtered picture.
+                 * 
+                 * @return the frame rate
+                 */
+                virtual IRational* getTimeBase() = 0;
+                
                 /**
                  * Sets the number of samples for each output filtered samples.
                  * The last buffer will be padded with 0.
@@ -55,6 +84,15 @@ namespace com {
                  * @return 0 on success or <0 if an error occurs
                  */
                 virtual int fillAudioSamples(IAudioSamples* samples) = 0;
+                
+                /**
+                 * Fills this video picture with filtered data 
+                 * 
+                 * @param samples the video picture filled with filtered data
+                 * 
+                 * @return 0 on success or <0 if an error occurs
+                 */
+                virtual int fillVideoPicture(IVideoPicture* picture) = 0; 
                 
             protected:
                 virtual ~IBufferSink() = default;

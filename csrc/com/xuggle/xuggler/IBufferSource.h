@@ -34,6 +34,15 @@ namespace com {
                  * 
                  */
                 virtual int addAudioSamples(IAudioSamples* samples) = 0;
+                
+                /**
+                 * Adds picture to this filter
+                 * 
+                 * @param picture the picture to add
+                 * @return 0 on success or <0 if an error occurs
+                 * 
+                 */
+                virtual int addVideoPicture(IVideoPicture* picture) = 0;
 
             protected:
                 virtual ~IBufferSource() = default;

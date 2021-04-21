@@ -19,6 +19,8 @@
 #include <com/xuggle/xuggler/IRational.h>
 #include <com/xuggle/xuggler/IBufferSource.h>
 #include <com/xuggle/xuggler/MediaFilter.h>
+#include <com/xuggle/ferry/RefPointer.h>
+
 
 extern "C" {
 #include "libavfilter/avfilter.h"
@@ -26,10 +28,11 @@ extern "C" {
 }
 
 
-
 namespace com {
     namespace xuggle {
         namespace xuggler {
+            
+            using namespace com::xuggle::ferry;
 
             class BufferSource : public IBufferSource, public MediaFilter {
                 VS_JNIUTILS_REFCOUNTED_OBJECT_PRIVATE_MAKE(BufferSource)
@@ -39,7 +42,16 @@ namespace com {
                     int sample_rate,
                     IRational* time_base,
                     IAudioSamples::ChannelLayout channel_layout);
+                
+                static BufferSource* make(AVFilterGraph* graph, IPixelFormat::Type format,
+                    int width,
+                    int height,
+                    IRational* frame_rate,
+                    IRational* time_base);
+                
                 virtual int addAudioSamples(IAudioSamples* samples);
+                
+                virtual int addVideoPicture(IVideoPicture* picture);
 
     
             protected:
@@ -48,6 +60,7 @@ namespace com {
             private:
                 AVFilterGraph* mFilterGraph;
                 int mSampleRate;
+                com::xuggle::ferry::RefPointer<IRational> mTimeBase;
             };
 
         }

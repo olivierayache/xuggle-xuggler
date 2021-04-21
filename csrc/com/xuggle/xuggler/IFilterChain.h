@@ -18,6 +18,8 @@
 #include <com/xuggle/xuggler/Xuggler.h>
 #include <com/xuggle/xuggler/IMediaFilter.h>
 #include <com/xuggle/xuggler/IAudioSamples.h>
+#include <com/xuggle/xuggler/IPixelFormat.h>
+#include <com/xuggle/xuggler/IVideoPicture.h>
 #include <com/xuggle/xuggler/IBufferSource.h>
 #include <com/xuggle/xuggler/IBufferSink.h>
 
@@ -55,14 +57,32 @@ namespace com {
                     int channels,
                     int sample_rate,
                     IRational* time_base,
-                    IAudioSamples::ChannelLayout channel_layout = IAudioSamples::CH_NONE) = 0;
+                    IAudioSamples::ChannelLayout channel_layout = IAudioSamples::ChannelLayout::CH_NONE) = 0;
+                
+                /**
+                 * 
+                 * @return a new video source for this chain
+                 * 
+                 */
+                virtual IBufferSource* createVideoSource(IPixelFormat::Type format,
+                    int width,
+                    int height,
+                    IRational* frame_rate,
+                    IRational* time_base) = 0;
                 
                 /**
                  *
                  * @return a new sink for this chain
                  * 
                  */
-                virtual IBufferSink* createSink(IAudioSamples::ChannelLayout channel_layout = IAudioSamples::CH_NONE) = 0;
+                virtual IBufferSink* createSink(IAudioSamples::ChannelLayout channel_layout = IAudioSamples::ChannelLayout::CH_NONE) = 0;
+                
+                /**
+                 *
+                 * @return a new video sink for this chain
+                 * 
+                 */
+                virtual IBufferSink* createVideoSink(IPixelFormat::Type pixel_type = IPixelFormat::NONE) = 0;
                 
                 /**
                  * Configures the chain
