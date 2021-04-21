@@ -261,8 +261,8 @@ namespace com { namespace xuggle { namespace xuggler
      * Added for 2.1
      */
   public:
-    typedef enum ChannelLayout {
-CH_NONE=                   -1,        
+    enum class ChannelLayout : uint64_t {
+CH_NONE=                   0,        
 CH_FRONT_LEFT=             0x00000001,
 CH_FRONT_RIGHT=            0x00000002,
 CH_FRONT_CENTER=           0x00000004,
@@ -328,7 +328,7 @@ CH_LAYOUT_OCTAGONAL=         (CH_LAYOUT_5POINT0|CH_BACK_LEFT|CH_BACK_CENTER|CH_B
 CH_LAYOUT_HEXADECAGONAL=     (CH_LAYOUT_OCTAGONAL|CH_WIDE_LEFT|CH_WIDE_RIGHT|CH_TOP_BACK_LEFT|CH_TOP_BACK_RIGHT|CH_TOP_BACK_CENTER|CH_TOP_FRONT_CENTER|CH_TOP_FRONT_LEFT|CH_TOP_FRONT_RIGHT),
 CH_LAYOUT_STEREO_DOWNMIX=    (CH_STEREO_LEFT|CH_STEREO_RIGHT),
 
-    } ChannelLayout;
+    } ;
     
     
     virtual ChannelLayout getChannelLayout() = 0;

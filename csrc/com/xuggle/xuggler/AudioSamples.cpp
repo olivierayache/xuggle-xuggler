@@ -31,14 +31,14 @@ VS_LOG_SETUP(VS_CPP_PACKAGE);
 namespace com { namespace xuggle { namespace xuggler
 {
   using namespace com::xuggle::ferry;
-  
+    
   AudioSamples :: AudioSamples()
   {
     mSamples = 0;
     mNumSamples = 0;
     mSampleRate = 0;
     mChannels = 1;
-    mChannelLayout = CH_NONE;
+    mChannelLayout = IAudioSamples::ChannelLayout::CH_NONE;
     mIsComplete = false;
     mSampleFmt = FMT_S16;
     mPts = Global::NO_PTS;
@@ -49,6 +49,7 @@ namespace com { namespace xuggle { namespace xuggler
   AudioSamples :: ~AudioSamples()
   {
     mSamples = 0;
+    mTimeBase = 0;
     mNumSamples = 0;
     mSampleRate = 0;
     mChannels = 1;
