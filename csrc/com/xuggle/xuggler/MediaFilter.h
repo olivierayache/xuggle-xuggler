@@ -51,6 +51,7 @@ namespace com {
 
                 virtual int setProperty(const char* name, const char* value) {
                     if (mFilterContext) {
+                        avfilter_process_command(mFilterContext, name, value, 0, 0, 0);
                         return av_opt_set(mFilterContext, name, value, AV_OPT_SEARCH_CHILDREN);
                     }
                     return -1;
@@ -74,10 +75,15 @@ namespace com {
                 
                 virtual int addSink(IBufferSink* filterSink);
                 
+                virtual int setReady(){
+                    ready = true;
+                }
+                
             protected:
 
                 AVFilter* mFilter;
                 AVFilterContext* mFilterContext;
+                bool ready;
 
                 MediaFilter();
 

@@ -1234,7 +1234,7 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
       pkt.data = inBuf;
       pkt.size = inBufSize;
       
-      mCodecContext->reordered_opaque = packet->getPts();
+      //mCodecContext->reordered_opaque = packet->getPts();
       retval = avcodec_decode_video2(mCodecContext, avFrame, &frameFinished,
           &pkt);
       VS_LOG_TRACE("Finished %d decodeVideo(%p, %p, %d, %p, %d);",
@@ -1244,66 +1244,71 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
           frameFinished,
           inBuf,
           inBufSize);
-      if (frameFinished)
+      
+      if (retval >= 0) 
       {
-        // copy FFMPEG's buffer into our buffer; don't try to get efficient
-        // and reuse the buffer FFMPEG is using; in order to allow our
-        // buffers to be thread safe, we must do a copy here.
-        frame->copyAVFrame(avFrame, getPixelType(), getWidth(), getHeight());
-        RefPointer<IRational> timeBase = 0;
-        timeBase = this->mStream ? this->mStream->getTimeBase() : 0;
-        if (!timeBase)
-          timeBase = this->getTimeBase();
 
-        int64_t packetTs = av_frame_get_best_effort_timestamp(avFrame);
-        
-        if (packetTs != Global::NO_PTS)
-        {
-          if (timeBase->getNumerator() != 0)
+          if (frameFinished)
           {
-            // The decoder set a PTS, so we let it override us
-            int64_t nextPts = mFakePtsTimeBase->rescale(packetTs,
-                timeBase.value());
-            // some youtube videos incorrectly return a packet
-            // with the wrong re-ordered opaque setting.  this
-            // detects that and uses the PTS from the packet instead.
-            // See: http://code.google.com/p/xuggle/issues/detail?id=165
-            // in this way we enforce that timestamps are always
-            // increasing
-            if (avFrame->reordered_opaque != Global::NO_PTS && nextPts < mFakeNextPts && packet->getPts() != Global::NO_PTS) {
-              VS_LOG_WARN("Bad order in pts packet pts will be used instead of frame pts (packetTs: %ld, reordered_opaque: %ld, nextPts: %ld, mFakeNextPts: %ld, packet pts: %ld)", 
-                      packetTs,
-                      avFrame->reordered_opaque, 
-                      nextPts,
-                      mFakeNextPts, 
-                      packet->getPts());
-              nextPts = mFakePtsTimeBase->rescale(packet->getPts(),
-                  timeBase.value());
+            // copy FFMPEG's buffer into our buffer; don't try to get efficient
+            // and reuse the buffer FFMPEG is using; in order to allow our
+            // buffers to be thread safe, we must do a copy here.
+            frame->copyAVFrame(avFrame, getPixelType(), getWidth(), getHeight());
+            RefPointer<IRational> timeBase = 0;
+            timeBase = this->mStream ? this->mStream->getTimeBase() : 0;
+            if (!timeBase)
+              timeBase = this->getTimeBase();
+
+            int64_t packetTs = avFrame->pts;
+
+            if (packetTs != Global::NO_PTS)
+            {
+              if (timeBase->getNumerator() != 0)
+              {
+                // The decoder set a PTS, so we let it override us
+                int64_t nextPts = mFakePtsTimeBase->rescale(packetTs,
+                    timeBase.value());
+                // some youtube videos incorrectly return a packet
+                // with the wrong re-ordered opaque setting.  this
+                // detects that and uses the PTS from the packet instead.
+                // See: http://code.google.com/p/xuggle/issues/detail?id=165
+                // in this way we enforce that timestamps are always
+                // increasing
+    //            if (avFrame->reordered_opaque != Global::NO_PTS && nextPts < mFakeNextPts && packet->getPts() != Global::NO_PTS) {
+    //              VS_LOG_WARN("Bad order in pts packet pts will be used instead of frame pts (packetTs: %ld, reordered_opaque: %ld, nextPts: %ld, mFakeNextPts: %ld, packet pts: %ld)", 
+    //                      packetTs,
+    //                      avFrame->reordered_opaque, 
+    //                      nextPts,
+    //                      mFakeNextPts, 
+    //                      packet->getPts());
+    //              nextPts = mFakePtsTimeBase->rescale(packet->getPts(),
+    //                  timeBase.value());
+    //            }
+                mFakeNextPts = nextPts;
+              }
             }
-            mFakeNextPts = nextPts;
+
+            // Use the last value of the next pts
+            mFakeCurrPts = mFakeNextPts;
+            double frameDelay = av_rescale(timeBase->getNumerator(),
+                AV_TIME_BASE, timeBase->getDenominator());
+            frameDelay += avFrame->repeat_pict * (frameDelay * 0.5);
+
+            // adjust our next Pts pointer
+            mFakeNextPts += (int64_t) frameDelay;
+            //          VS_LOG_DEBUG("frame complete: %s; pts: %lld; packet ts: %lld; opaque ts: %lld; tb: %ld/%ld",
+            //              (frameFinished ? "yes" : "no"),
+            //              mFakeCurrPts,
+            //              (packet ? packet->getDts() : 0),
+            //              packetTs,
+            //              timeBase->getNumerator(),
+            //              timeBase->getDenominator()
+            //          );
           }
+          frame->setComplete(frameFinished, this->getPixelType(),
+              this->getWidth(), this->getHeight(), mFakeCurrPts);
+
         }
-
-        // Use the last value of the next pts
-        mFakeCurrPts = mFakeNextPts;
-        double frameDelay = av_rescale(timeBase->getNumerator(),
-            AV_TIME_BASE, timeBase->getDenominator());
-        frameDelay += avFrame->repeat_pict * (frameDelay * 0.5);
-
-        // adjust our next Pts pointer
-        mFakeNextPts += (int64_t) frameDelay;
-        //          VS_LOG_DEBUG("frame complete: %s; pts: %lld; packet ts: %lld; opaque ts: %lld; tb: %ld/%ld",
-        //              (frameFinished ? "yes" : "no"),
-        //              mFakeCurrPts,
-        //              (packet ? packet->getDts() : 0),
-        //              packetTs,
-        //              timeBase->getNumerator(),
-        //              timeBase->getDenominator()
-        //          );
-      }
-      frame->setComplete(frameFinished, this->getPixelType(),
-          this->getWidth(), this->getHeight(), mFakeCurrPts);
-
     }
     av_frame_free(&avFrame);
   }
@@ -1781,10 +1786,10 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
            int ret = 0;
            if (!swr_is_initialized(swrContext)){
                swr_alloc_set_opts(swrContext, // we're using existing context
-                                samples->getChannelLayout(), // out_ch_layout
+                                (int64_t)samples->getChannelLayout(), // out_ch_layout
                                 mCodecContext->sample_fmt, // out_sample_fmt
                                 samples->getSampleRate(), // out_sample_rate
-                                samples->getChannelLayout(), // in_ch_layout
+                                (int64_t)samples->getChannelLayout(), // in_ch_layout
                                 AV_SAMPLE_FMT_S16, // in_sample_fmt
                                 samples->getSampleRate(), // in_sample_rate
                                 0, // log_offset
@@ -1796,7 +1801,7 @@ StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
            AVFrame* codingFrame = av_frame_alloc();
            codingFrame->nb_samples     = frameSize;
            codingFrame->format         = mCodecContext->sample_fmt;
-           codingFrame->channel_layout = samples->getChannelLayout();
+           codingFrame->channel_layout = (uint64_t)samples->getChannelLayout();
                       
            if (samples->getPts() != Global::NO_PTS) {
                codingFrame->pts            = mPtsOfFrameBuffer;
