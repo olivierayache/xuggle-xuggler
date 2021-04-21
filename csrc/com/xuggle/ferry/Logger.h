@@ -126,7 +126,7 @@ namespace com { namespace xuggle { namespace ferry {
     // the right buffer-growth stuff, and with thread-safe
     // semantics, but for now, this implementation just allocates
     // this buffer on the stack before handing off to Java/stdio.
-    static const int cMaxLogMessageLength=4096;
+    static const int cMaxLogMessageLength=16384;
     static const int cMaxLoggerNameLength=255;
     char mLoggerName[cMaxLoggerNameLength+1];
     bool mIsLogging[5];
