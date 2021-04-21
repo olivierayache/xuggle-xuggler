@@ -94,12 +94,6 @@ namespace com { namespace xuggle { namespace xuggler
       if (inputChannels <= 0)
         throw std::invalid_argument("inputChannels <= 0");
 
-      if (outputChannels > 2)
-        throw std::invalid_argument("outputChannels > 2; unsupported");
-
-      if (inputChannels > 2)
-        throw std::invalid_argument("inputChannels > 2; unsupported");
-
       if (outputRate <= 0)
         throw std::invalid_argument("outputRate <= 0");
 
