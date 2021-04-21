@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# This script is here to update the branch to the latest version
+git subtree pull --prefix=captive/libsrt/csrc --squash https://github.com/Haivision/srt.git v1.4.2
