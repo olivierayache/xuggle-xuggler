@@ -195,6 +195,8 @@ AC_CONFIG_FILES([Makefile
                  libogg/incarcerate
                  libopus/Makefile
                  libopus/incarcerate
+                 libsrt/Makefile
+                 libsrt/incarcerate
                  libvorbis/Makefile
                  libvorbis/incarcerate
                  libtheora/Makefile
