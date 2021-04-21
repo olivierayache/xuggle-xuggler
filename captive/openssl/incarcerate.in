@@ -41,7 +41,7 @@ case $HOST_OS in
   *linux*)
     case $HOST_OS in
       *x86_64*)
-      OPENSSL_CONFIG=linux-x86_64 -fPIC -Wa,--noexecstack
+      OPENSSL_CONFIG=linux-x86_64
       ;;
       *)
       OPENSSL_CONFIG=linux-generic32 -fPIC -Wa,--noexecstack 
