@@ -33,6 +33,8 @@ if test "x$CAPTIVE_ENABLE_FFMPEG_GPL" = "xyes"; then
   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-gpl --enable-nonfree"
   # x264 can only be used in GPL mode
   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libx264"
+else
+  FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libopenh264"
 fi
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-version3"
 
@@ -70,12 +72,16 @@ FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libtheora"
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libspeex"
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libopus"
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libopencore-amrnb --enable-libopencore-amrwb"
-FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-librtmp"
+FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-libsrt"
 case $HOST_OS in
   *mingw*|*cygwin*)
    # ffmpeg configure doesn't handle pkg-config files correctly when
    # static linking, so we fix librtmp here.
    FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-lwinmm"
+   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-lwsock32"
+   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-lgdi32"
+   # it is weird but with ming64 ld does not work with this optimization
+   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --disable-mmx"
   ;;
   *linux-android*)
    # ffmpeg configure doesn't handle pkg-config files correctly when
@@ -85,6 +91,8 @@ case $HOST_OS in
    FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-ldl"
    FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-lmediandk"
    FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-landroid"
+   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-llog"
+   FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-libs=-lmediacodec_backport"
   ;;
   *linux*)
    # ffmpeg configure doesn't handle pkg-config files correctly when
