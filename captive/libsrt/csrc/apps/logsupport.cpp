@@ -11,7 +11,6 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <iterator>
 #include <algorithm>
 #include <cctype>
 #include "logsupport.hpp"

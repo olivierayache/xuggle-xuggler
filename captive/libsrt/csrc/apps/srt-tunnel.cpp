@@ -115,26 +115,17 @@ public:
         return os.str();
     }
 
-    Medium(const UriParser& u, size_t ch): m_counter(s_counter++), m_uri(u), m_chunk(ch) {}
+    Medium(UriParser u, size_t ch): m_counter(s_counter++), m_uri(u), m_chunk(ch) {}
     Medium(): m_counter(s_counter++) {}
 
     virtual const char* type() = 0;
     virtual bool IsOpen() = 0;
     virtual void CloseInternal() = 0;
 
-    void CloseState()
+    void Close()
     {
         m_open = false;
         m_broken = true;
-    }
-
-    // External API for this class that allows to close
-    // the entity on request. The CloseInternal should
-    // redirect to a type-specific function, the same that
-    // should be also called in destructor.
-    void Close()
-    {
-        CloseState();
         CloseInternal();
     }
     virtual bool End() = 0;
@@ -178,7 +169,6 @@ public:
 
     virtual ~Medium()
     {
-        CloseState();
     }
 
 protected:
@@ -435,7 +425,7 @@ public:
     bool End() override { return m_eof; }
     bool Broken() override { return m_broken; }
 
-    void CloseSrt()
+    void CloseInternal() override
     {
         Verb() << "Closing SRT socket for " << uri();
         lock_guard<mutex> lk(access);
@@ -445,23 +435,18 @@ public:
         m_socket = SRT_ERROR;
     }
 
-    // Forwarded in order to separate the implementation from
-    // the virtual function so that virtual function is not
-    // being called in destructor.
-    void CloseInternal() override { return CloseSrt(); }
+    virtual const char* type() override { return "srt"; }
+    virtual int ReadInternal(char* output, int size) override;
+    virtual bool IsErrorAgain() override;
 
-    const char* type() override { return "srt"; }
-    int ReadInternal(char* output, int size) override;
-    bool IsErrorAgain() override;
-
-    void Write(bytevector& portion) override;
-    void CreateListener() override;
-    void CreateCaller() override;
-    unique_ptr<Medium> Accept() override;
-    void Connect() override;
+    virtual void Write(bytevector& portion) override;
+    virtual void CreateListener() override;
+    virtual void CreateCaller() override;
+    virtual unique_ptr<Medium> Accept() override;
+    virtual void Connect() override;
 
 protected:
-    void Init() override;
+    virtual void Init() override;
 
     void ConfigurePre();
     void ConfigurePost(SRTSOCKET socket);
@@ -473,10 +458,9 @@ protected:
         throw TransmissionError("ERROR: " + text + ": " + ri.getErrorMessage());
     }
 
-    ~SrtMedium() override
+    virtual ~SrtMedium() override
     {
-        CloseState();
-        CloseSrt();
+        Close();
     }
 };
 
@@ -525,7 +509,7 @@ public:
     bool End() override { return m_eof; }
     bool Broken() override { return m_broken; }
 
-    void CloseTcp()
+    void CloseInternal() override
     {
         Verb() << "Closing TCP socket for " << uri();
         lock_guard<mutex> lk(access);
@@ -534,16 +518,15 @@ public:
         tcp_close(m_socket);
         m_socket = -1;
     }
-    void CloseInternal() override { return CloseTcp(); }
 
-    const char* type() override { return "tcp"; }
-    int ReadInternal(char* output, int size) override;
-    bool IsErrorAgain() override;
-    void Write(bytevector& portion) override;
-    void CreateListener() override;
-    void CreateCaller() override;
-    unique_ptr<Medium> Accept() override;
-    void Connect() override;
+    virtual const char* type() override { return "tcp"; }
+    virtual int ReadInternal(char* output, int size) override;
+    virtual bool IsErrorAgain() override;
+    virtual void Write(bytevector& portion) override;
+    virtual void CreateListener() override;
+    virtual void CreateCaller() override;
+    virtual unique_ptr<Medium> Accept() override;
+    virtual void Connect() override;
 
 protected:
 
@@ -569,8 +552,7 @@ protected:
 
     virtual ~TcpMedium()
     {
-        CloseState();
-        CloseTcp();
+        Close();
     }
 };
 

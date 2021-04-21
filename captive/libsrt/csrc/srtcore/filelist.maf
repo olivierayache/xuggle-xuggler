@@ -21,14 +21,11 @@ queue.cpp
 congctl.cpp
 srt_c_api.cpp
 window.cpp
-socketconfig.cpp
 srt_compat.c
-strerror_defs.cpp
 sync.cpp
 
 SOURCES - ENABLE_EXPERIMENTAL_BONDING
 group.cpp
-group_common.cpp
 
 SOURCES - !ENABLE_STDCXX_SYNC
 sync_posix.cpp
@@ -66,7 +63,6 @@ packet.h
 sync.h
 queue.h
 congctl.h
-socketconfig.h
 srt_compat.h
 threadname.h
 utilities.h
@@ -74,4 +70,3 @@ window.h
 
 PRIVATE HEADERS - ENABLE_EXPERIMENTAL_BONDING
 group.h
-group_common.h

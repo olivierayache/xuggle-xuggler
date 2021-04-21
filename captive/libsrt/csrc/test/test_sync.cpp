@@ -259,38 +259,6 @@ TEST(SyncTimePoint, OperatorMinusEqDuration)
 
 /*****************************************************************************/
 /*
- * UniqueLock tests
- */
-/*****************************************************************************/
-TEST(SyncUniqueLock, LockUnlock)
-{
-    Mutex mtx;
-    UniqueLock lock(mtx);
-    EXPECT_FALSE(mtx.try_lock());
-    
-    lock.unlock();
-    EXPECT_TRUE(mtx.try_lock());
-    
-    mtx.unlock();
-    lock.lock();
-    EXPECT_FALSE(mtx.try_lock());
-}
-
-TEST(SyncUniqueLock, Scope)
-{
-    Mutex mtx;
-
-    {
-        UniqueLock lock(mtx);
-        EXPECT_FALSE(mtx.try_lock());
-    }
-    
-    EXPECT_TRUE(mtx.try_lock());
-    mtx.unlock();
-}
-
-/*****************************************************************************/
-/*
  * SyncEvent tests
  */
 /*****************************************************************************/
@@ -314,8 +282,7 @@ TEST(SyncEvent, WaitFor)
         // - SyncEvent::wait_for( 50us) took 6us
         // - SyncEvent::wait_for(100us) took 4us
         if (on_timeout) {
-            const int tolerance = timeout_us/1000;
-            EXPECT_GE(waittime_us, timeout_us - tolerance);
+            EXPECT_GE(waittime_us, timeout_us);
         }
 #endif
         if (on_timeout) {
@@ -547,34 +514,6 @@ TEST(SyncEvent, WaitForNotifyAll)
 
 /*****************************************************************************/
 /*
- * CThread
- */
- /*****************************************************************************/
-void* dummythread(void* param)
-{
-    *(bool*)(param) = true;
-    return nullptr;
-}
-
-TEST(SyncThread, Joinable)
-{
-    CThread foo;
-    volatile bool thread_finished = false;
-
-    StartThread(foo, dummythread, (void*)&thread_finished, "DumyThread");
-
-    EXPECT_TRUE(foo.joinable());
-    while (!thread_finished)
-    {
-        std::this_thread::sleep_for(chrono::milliseconds(50));
-    }
-    EXPECT_TRUE(foo.joinable());
-    foo.join();
-    EXPECT_FALSE(foo.joinable());
-}
-
-/*****************************************************************************/
-/*
  * FormatTime
  */
 /*****************************************************************************/
@@ -587,7 +526,7 @@ TEST(Sync, FormatTime)
 {
     auto parse_time = [](const string& timestr) -> long long {
         // Example string: 1D 02:10:55.972651 [STD]
-        const regex rex("([[:digit:]]+D )?([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2}).([[:digit:]]{6,}) \\[STDY\\]");
+        const regex rex("([[:digit:]]+D )?([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2}).([[:digit:]]{6}) \\[STD\\]");
         std::smatch sm;
         EXPECT_TRUE(regex_match(timestr, sm, rex));
         EXPECT_LE(sm.size(), 6);
@@ -596,10 +535,10 @@ TEST(Sync, FormatTime)
 
         // Day may be missing if zero
         const long long d = sm[1].matched ? std::stoi(sm[1]) : 0;
-        const long long h = std::stoll(sm[2]);
-        const long long m = std::stoll(sm[3]);
-        const long long s = std::stoll(sm[4]);
-        const long long u = std::stoll(sm[5]);
+        const long long h = std::stoi(sm[2]);
+        const long long m = std::stoi(sm[3]);
+        const long long s = std::stoi(sm[4]);
+        const long long u = std::stoi(sm[5]);
 
         return u + s * 1000000 + m * 60000000 + h * 60 * 60 * 1000000 + d * 24 * 60 * 60 * 1000000;
     };
@@ -631,7 +570,7 @@ TEST(Sync, FormatTime)
 TEST(Sync, FormatTimeSys)
 {
     auto parse_time = [](const string& timestr) -> long long {
-        const regex rex("([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2}).([[:digit:]]{6}) \\[SYST\\]");
+        const regex rex("([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2}).([[:digit:]]{6}) \\[SYS\\]");
         std::smatch sm;
         EXPECT_TRUE(regex_match(timestr, sm, rex));
         EXPECT_EQ(sm.size(), 5);

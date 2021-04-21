@@ -449,7 +449,7 @@ bool DoUpload(UriParser& ut, string path, string filename,
             }
             Verb() << "Sending buffer still: bytes=" << bytes << " blocks="
                 << blocks;
-            srt::sync::this_thread::sleep_for(srt::sync::milliseconds_from(250));
+            this_thread::sleep_for(chrono::milliseconds(250));
         }
     }
 
@@ -557,14 +557,7 @@ bool DoDownload(UriParser& us, string directory, string filename,
                 }
             }
             break;
-
-            // No need to do any special action in case of broken.
-            // The app will just try to read and in worst case it will
-            // get an error.
             case SRTS_BROKEN:
-            cerr << "Connection closed, reading buffer remains\n";
-            break;
-
             case SRTS_NONEXIST:
             case SRTS_CLOSED:
             {
@@ -608,7 +601,7 @@ bool DoDownload(UriParser& us, string directory, string filename,
             if (n == 0)
             {
                 result = true;
-                cerr << "Download COMPLETE.\n";
+                cerr << "Download COMPLETE.";
                 break;
             }
 

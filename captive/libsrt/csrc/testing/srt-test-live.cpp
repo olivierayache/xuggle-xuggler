@@ -101,11 +101,14 @@ struct AlarmExit: public std::runtime_error
     }
 };
 
+volatile bool int_state = false;
 volatile bool timer_state = false;
 void OnINT_ForceExit(int)
 {
     cerr << "\n-------- REQUESTED INTERRUPT!\n";
-    transmit_int_state = true;
+    int_state = true;
+    if ( transmit_throw_on_interrupt )
+        throw ForcedExit("Requested exception interrupt");
 }
 
 std::string g_interrupt_reason;
@@ -113,7 +116,7 @@ std::string g_interrupt_reason;
 void OnAlarm_Interrupt(int)
 {
     cerr << "\n---------- INTERRUPT ON TIMEOUT: hang on " << g_interrupt_reason << "!\n";
-    transmit_int_state = true; // JIC
+    int_state = false; // JIC
     timer_state = true;
     throw AlarmExit("Watchdog bites hangup");
 }
@@ -416,8 +419,6 @@ int main( int argc, char** argv )
     if ( !SysInitializeNetwork() )
         throw std::runtime_error("Can't initialize network!");
 
-    srt_startup();
-
     // Symmetrically, this does a cleanup; put into a local destructor to ensure that
     // it's called regardless of how this function returns.
     struct NetworkCleanup
@@ -425,7 +426,6 @@ int main( int argc, char** argv )
         ~NetworkCleanup()
         {
             SysCleanupNetwork();
-            srt_cleanup();
         }
     } cleanupobj;
 
@@ -451,7 +451,6 @@ int main( int argc, char** argv )
         o_group     ((optargs), "<URIs...> Using multiple SRT connections as redundancy group", "g"),
 #endif
         o_stime     ((optargs), " Pass source time explicitly to SRT output", "st", "srctime", "sourcetime"),
-        o_retry     ((optargs), "<N=-1,0,+N> Retry connection N times if failed on timeout", "rc", "retry"),
         o_help      ((optargs), "[special=logging] This help", "?",   "help", "-help")
             ;
 
@@ -687,26 +686,13 @@ int main( int argc, char** argv )
 #endif
     }
 
-    string pfextra;
-    SrtStatsPrintFormat statspf = ParsePrintFormat(Option<OutString>(params, "default", o_statspf), (pfextra));
+    SrtStatsPrintFormat statspf = ParsePrintFormat(Option<OutString>(params, "default", o_statspf));
     if (statspf == SRTSTATS_PROFMAT_INVALID)
     {
         cerr << "Invalid stats print format\n";
         return 1;
     }
     transmit_stats_writer = SrtStatsWriterFactory(statspf);
-    if (pfextra != "")
-    {
-        vector<string> options;
-        Split(pfextra, ',', back_inserter(options));
-        for (auto& i: options)
-        {
-            vector<string> klv;
-            Split(i, '=', back_inserter(klv));
-            klv.resize(2);
-            transmit_stats_writer->Option(klv[0], klv[1]);
-        }
-    }
 
     // Options that require integer conversion
     size_t stoptime = Option<OutNumber>(params, "0", o_stoptime);
@@ -775,17 +761,6 @@ int main( int argc, char** argv )
         }
     }
 
-    string retryphrase = Option<OutString>(params, "", o_retry);
-    if (retryphrase != "")
-    {
-        if (retryphrase[retryphrase.size()-1] == 'a')
-        {
-            transmit_retry_always = true;
-            retryphrase = retryphrase.substr(0, retryphrase.size()-1);
-        }
-
-        transmit_retry_connect = stoi(retryphrase);
-    }
 
 #ifdef _WIN32
 #define alarm(argument) (void)0
@@ -835,7 +810,7 @@ int main( int argc, char** argv )
     }
     catch(std::exception& x)
     {
-        if (::transmit_int_state)
+        if (::int_state)
         {
             // The application was terminated by SIGINT or SIGTERM.
             // Don't print anything, just exit gently like ffmpeg.
@@ -939,7 +914,7 @@ int main( int argc, char** argv )
 
             Verb() << "sent";
 
-            if (::transmit_int_state)
+            if ( int_state )
             {
                 Verror() << "\n (interrupted on request)";
                 break;
@@ -985,7 +960,7 @@ int main( int argc, char** argv )
         {
             Verror() << "Exit on timeout.";
         }
-        else if (::transmit_int_state)
+        else if (::int_state)
         {
             Verror() << "Exit on interrupt.";
             // Do nothing.

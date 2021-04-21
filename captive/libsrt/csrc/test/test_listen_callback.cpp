@@ -145,7 +145,7 @@ int SrtTestListenCallback(void* opaq, SRTSOCKET ns, int hsversion, const struct 
 
     static const char stdhdr [] = "#!::";
     uint32_t* pattern = (uint32_t*)stdhdr;
-    bool found = false;
+    bool found = -1;
 
     if (strlen(streamid) > 4 && *(uint32_t*)streamid == *pattern)
     {

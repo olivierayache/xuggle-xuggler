@@ -7,7 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  */
-#include "platform_sys.h"
 
 #include <iomanip>
 #include <math.h>
@@ -21,10 +20,14 @@
 #include "common.h"
 
 #if defined(_WIN32)
+#define TIMING_USE_QPC
 #include "win/wintime.h"
 #include <sys/timeb.h>
-#elif TARGET_OS_MAC
+#elif defined(OSX) || (TARGET_OS_OSX == 1) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
+#define TIMING_USE_MACH_ABS_TIME
 #include <mach/mach_time.h>
+#elif defined(ENABLE_MONOTONIC_CLOCK)
+#define TIMING_USE_CLOCK_GETTIME
 #endif
 
 namespace srt_logging
@@ -38,9 +41,9 @@ namespace srt
 namespace sync
 {
 
-static void rdtsc(uint64_t& x)
+void rdtsc(uint64_t& x)
 {
-#if SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_IA32_RDTSC
+#ifdef IA32
     uint32_t lval, hval;
     // asm volatile ("push %eax; push %ebx; push %ecx; push %edx");
     // asm volatile ("xor %eax, %eax; cpuid");
@@ -48,58 +51,52 @@ static void rdtsc(uint64_t& x)
     // asm volatile ("pop %edx; pop %ecx; pop %ebx; pop %eax");
     x = hval;
     x = (x << 32) | lval;
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_IA64_ITC
+#elif defined(IA64)
     asm("mov %0=ar.itc" : "=r"(x)::"memory");
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_AMD64_RDTSC
+#elif defined(AMD64)
     uint32_t lval, hval;
     asm("rdtsc" : "=a"(lval), "=d"(hval));
     x = hval;
     x = (x << 32) | lval;
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_WINQPC
+#elif defined(TIMING_USE_QPC)
     // This function should not fail, because we checked the QPC
     // when calling to QueryPerformanceFrequency. If it failed,
     // the m_bUseMicroSecond was set to true.
     QueryPerformanceCounter((LARGE_INTEGER*)&x);
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_MACH_ABSTIME
+#elif defined(TIMING_USE_MACH_ABS_TIME)
     x = mach_absolute_time();
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_GETTIME_MONOTONIC
+#elif defined(TIMING_USE_CLOCK_GETTIME)
     // get_cpu_frequency() returns 1 us accuracy in this case
     timespec tm;
     clock_gettime(CLOCK_MONOTONIC, &tm);
     x = tm.tv_sec * uint64_t(1000000) + (tm.tv_nsec / 1000);
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_POSIX_GETTIMEOFDAY
+#else
     // use system call to read time clock for other archs
     timeval t;
     gettimeofday(&t, 0);
     x = t.tv_sec * uint64_t(1000000) + t.tv_usec;
-#else
-#error Wrong SRT_SYNC_CLOCK
 #endif
 }
 
-static int64_t get_cpu_frequency()
+int64_t get_cpu_frequency()
 {
     int64_t frequency = 1; // 1 tick per microsecond.
 
-#if SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_WINQPC
+#if defined(TIMING_USE_QPC)
     LARGE_INTEGER ccf; // in counts per second
     if (QueryPerformanceFrequency(&ccf))
-    {
         frequency = ccf.QuadPart / 1000000; // counts per microsecond
-    }
-    else
-    {
-        // Can't throw an exception, it won't be handled.
-        LOGC(inlog.Error, log << "IPE: QueryPerformanceFrequency failed with " << GetLastError());
-    }
 
-#elif SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_MACH_ABSTIME
+#elif defined(TIMING_USE_CLOCK_GETTIME)
+    frequency = 1;
+
+#elif defined(TIMING_USE_MACH_ABS_TIME)
+
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     frequency = info.denom * int64_t(1000) / info.numer;
 
-#elif SRT_SYNC_CLOCK >= SRT_SYNC_CLOCK_AMD64_RDTSC && SRT_SYNC_CLOCK <= SRT_SYNC_CLOCK_IA64_ITC
-    // SRT_SYNC_CLOCK_AMD64_RDTSC or SRT_SYNC_CLOCK_IA32_RDTSC or SRT_SYNC_CLOCK_IA64_ITC
+#elif defined(IA32) || defined(IA64) || defined(AMD64)
     uint64_t t1, t2;
 
     rdtsc(t1);
@@ -116,18 +113,8 @@ static int64_t get_cpu_frequency()
     return frequency;
 }
 
-static int count_subsecond_precision(int64_t ticks_per_us)
-{
-    int signs = 6; // starting from 1 us
-    while (ticks_per_us /= 10) ++signs;
-    return signs;
-}
+const int64_t s_cpu_frequency = get_cpu_frequency();
 
-const int64_t s_clock_ticks_per_us = get_cpu_frequency();
-
-const int s_clock_subsecond_precision = count_subsecond_precision(s_clock_ticks_per_us);
-
-int clockSubsecondPrecision() { return s_clock_subsecond_precision; }
 
 } // namespace sync
 } // namespace srt
@@ -167,32 +154,32 @@ srt::sync::TimePoint<srt::sync::steady_clock> srt::sync::steady_clock::now()
 
 int64_t srt::sync::count_microseconds(const steady_clock::duration& t)
 {
-    return t.count() / s_clock_ticks_per_us;
+    return t.count() / s_cpu_frequency;
 }
 
 int64_t srt::sync::count_milliseconds(const steady_clock::duration& t)
 {
-    return t.count() / s_clock_ticks_per_us / 1000;
+    return t.count() / s_cpu_frequency / 1000;
 }
 
 int64_t srt::sync::count_seconds(const steady_clock::duration& t)
 {
-    return t.count() / s_clock_ticks_per_us / 1000000;
+    return t.count() / s_cpu_frequency / 1000000;
 }
 
 srt::sync::steady_clock::duration srt::sync::microseconds_from(int64_t t_us)
 {
-    return steady_clock::duration(t_us * s_clock_ticks_per_us);
+    return steady_clock::duration(t_us * s_cpu_frequency);
 }
 
 srt::sync::steady_clock::duration srt::sync::milliseconds_from(int64_t t_ms)
 {
-    return steady_clock::duration((1000 * t_ms) * s_clock_ticks_per_us);
+    return steady_clock::duration((1000 * t_ms) * s_cpu_frequency);
 }
 
 srt::sync::steady_clock::duration srt::sync::seconds_from(int64_t t_s)
 {
-    return steady_clock::duration((1000000 * t_s) * s_clock_ticks_per_us);
+    return steady_clock::duration((1000000 * t_s) * s_cpu_frequency);
 }
 
 srt::sync::Mutex::Mutex()
@@ -247,12 +234,6 @@ srt::sync::UniqueLock::~UniqueLock()
     unlock();
 }
 
-void srt::sync::UniqueLock::lock()
-{
-    if (m_iLocked == -1)
-        m_iLocked = m_Mutex.lock();
-}
-
 void srt::sync::UniqueLock::unlock()
 {
     if (m_iLocked == 0)
@@ -289,7 +270,7 @@ Condition::~Condition() {}
 void Condition::init()
 {
     pthread_condattr_t* attr = NULL;
-#if SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_GETTIME_MONOTONIC
+#if ENABLE_MONOTONIC_CLOCK
     pthread_condattr_t  CondAttribs;
     pthread_condattr_init(&CondAttribs);
     pthread_condattr_setclock(&CondAttribs, CLOCK_MONOTONIC);
@@ -313,7 +294,7 @@ void Condition::wait(UniqueLock& lock)
 bool Condition::wait_for(UniqueLock& lock, const steady_clock::duration& rel_time)
 {
     timespec timeout;
-#if SRT_SYNC_CLOCK == SRT_SYNC_CLOCK_GETTIME_MONOTONIC
+#if ENABLE_MONOTONIC_CLOCK
     clock_gettime(CLOCK_MONOTONIC, &timeout);
     const uint64_t now_us = timeout.tv_sec * uint64_t(1000000) + (timeout.tv_nsec / 1000);
 #else
@@ -382,13 +363,13 @@ srt::sync::CThread& srt::sync::CThread::operator=(CThread& other)
         LOGC(inlog.Error, log << "IPE: Assigning to a thread that is not terminated!");
 
 #ifndef DEBUG
-#ifndef __ANDROID__
+#ifndef ANDROID
         // In case of production build the hanging thread should be terminated
         // to avoid hang ups and align with C++11 implementation.
         // There is no pthread_cancel on Android. See #1476. This error should not normally
         // happen, but if it happen, then detaching the thread.
         pthread_cancel(m_thread);
-#endif // __ANDROID__
+#endif // ANDROID
 #else
         join();
 #endif
@@ -424,7 +405,7 @@ void srt::sync::CThread::join()
 #ifdef HEAVY_LOGGING
     else
     {
-        HLOGC(inlog.Debug, log << "pthread_join SUCCEEDED");
+        LOGC(inlog.Debug, log << "pthread_join SUCCEEDED");
     }
 #endif
     // After joining, joinable should be false
@@ -456,84 +437,45 @@ class CThreadError
 public:
     CThreadError()
     {
-        pthread_key_create(&m_ThreadSpecKey, ThreadSpecKeyDestroy);
-
-        // This is a global object and as such it should be called in the
-        // main application thread or at worst in the thread that has first
-        // run `srt_startup()` function and so requested the SRT library to
-        // be dynamically linked. Most probably in this very thread the API
-        // errors will be reported, so preallocate the ThreadLocalSpecific
-        // object for this error description.
-
-        // This allows std::bac_alloc to crash the program during
-        // the initialization of the SRT library (likely it would be
-        // during the DL constructor, still way before any chance of
-        // doing any operations here). This will prevent SRT from running
-        // into trouble while trying to operate.
-        CUDTException* ne = new CUDTException();
-        pthread_setspecific(m_ThreadSpecKey, ne);
+        pthread_key_create(&m_TLSError, TLSDestroy);
     }
 
     ~CThreadError()
     {
-        // Likely all objects should be deleted in all
-        // threads that have exited, but std::this_thread didn't exit
-        // yet :).
-        ThreadSpecKeyDestroy(pthread_getspecific(m_ThreadSpecKey));
-        pthread_key_delete(m_ThreadSpecKey);
+        delete (CUDTException*)pthread_getspecific(m_TLSError);
+        pthread_key_delete(m_TLSError);
     }
 
+public:
     void set(const CUDTException& e)
     {
         CUDTException* cur = get();
-        // If this returns NULL, it means that there was an unexpected
-        // memory allocation error. Simply ignore this request if so
-        // happened, and then when trying to get the error description
-        // the application will always get the memory allocation error.
-
-        // There's no point in doing anything else here; lack of memory
-        // must be prepared for prematurely, and that was already done.
-        if (!cur)
-            return;
-
+        SRT_ASSERT(cur != NULL);
         *cur = e;
     }
 
-    /*[[nullable]]*/ CUDTException* get()
+    CUDTException* get()
     {
-        if (!pthread_getspecific(m_ThreadSpecKey))
+        if (!pthread_getspecific(m_TLSError))
         {
-            // This time if this can't be done due to memory allocation
-            // problems, just allow this value to be NULL, which during
-            // getting the error description will redirect to a memory
-            // allocation error.
-
-            // It would be nice to somehow ensure that this object is
-            // created in every thread of the application using SRT, but
-            // POSIX thread API doesn't contain any possibility to have
-            // a creation callback that would apply to every thread in
-            // the application (as it is for C++11 thread_local storage).
-            CUDTException* ne = new(std::nothrow) CUDTException();
-            pthread_setspecific(m_ThreadSpecKey, ne);
+            CUDTException* ne = new CUDTException();
+            pthread_setspecific(m_TLSError, ne);
             return ne;
         }
-        return (CUDTException*)pthread_getspecific(m_ThreadSpecKey);
+        return (CUDTException*)pthread_getspecific(m_TLSError);
     }
 
-    static void ThreadSpecKeyDestroy(void* e)
+    static void TLSDestroy(void* e)
     {
         delete (CUDTException*)e;
     }
 
 private:
-    pthread_key_t m_ThreadSpecKey;
+    pthread_key_t m_TLSError;
 };
 
 // Threal local error will be used by CUDTUnited
 // that has a static scope
-
-// This static makes this object file-private access so that
-// the access is granted only for the accessor functions.
 static CThreadError s_thErr;
 
 void SetThreadLocalError(const CUDTException& e)
@@ -543,17 +485,7 @@ void SetThreadLocalError(const CUDTException& e)
 
 CUDTException& GetThreadLocalError()
 {
-    // In POSIX version we take into account the possibility
-    // of having an allocation error here. Therefore we need to
-    // allow thie value to return NULL and have some fallback
-    // for that case. The dynamic memory allocation failure should
-    // be the only case as to why it is unable to get the pointer
-    // to the error description.
-    static CUDTException resident_alloc_error (MJ_SYSTEMRES, MN_MEMORY);
-    CUDTException* curx = s_thErr.get();
-    if (!curx)
-        return resident_alloc_error;
-    return *curx;
+    return *s_thErr.get();
 }
 
 } // namespace sync

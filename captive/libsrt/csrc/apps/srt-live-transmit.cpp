@@ -180,7 +180,7 @@ int parse_args(LiveTransmitConfig &cfg, int argc, char** argv)
         o_statspf       = { "pf", "statspf" },
         o_statsfull     = { "f", "fullstats" },
         o_loglevel      = { "ll", "loglevel" },
-        o_logfa         = { "lfa", "logfa" },
+        o_logfa         = { "logfa" },
         o_log_internal  = { "loginternal"},
         o_logfile       = { "logfile" },
         o_quiet         = { "q", "quiet" },
@@ -238,21 +238,20 @@ int parse_args(LiveTransmitConfig &cfg, int argc, char** argv)
             cerr << "    -lfa <area...> - specify functional areas\n";
             cerr << "Where:\n\n";
             cerr << "    <LEVEL>: fatal error note warning debug\n\n";
-            cerr << "Turns on logs that are at the given log level or any higher level\n";
-            cerr << "(all to the left in the list above from the selected level).\n";
-            cerr << "Names from syslog, like alert, crit, emerg, err, info, panic, are also\n";
-            cerr << "recognized, but they are aligned to those that lie close in the above hierarchy.\n\n";
-            cerr << "    <area...> is a coma-separated list of areas to turn on.\n\n";
-            cerr << "The list may include 'all' to turn all FAs on.\n";
-            cerr << "Example: `-lfa:sockmgmt,chn-recv` enables only `sockmgmt` and `chn-recv` log FAs.\n";
-            cerr << "Default: all are on except haicrypt. NOTE: 'general' FA can't be disabled.\n\n";
+            cerr << "This turns on logs that are at the given log name and all on the left.\n";
+            cerr << "(Names from syslog, like alert, crit, emerg, err, info, panic, are also\n";
+            cerr << "recognized, but they are aligned to those that lie close in hierarchy.)\n\n";
+            cerr << "    <area...> is a space-sep list of areas to turn on or ~areas to turn off.\n\n";
+            cerr << "The list may include 'all' to turn all on or off, beside those selected.\n";
+            cerr << "Example: `-lfa ~all cc` - turns off all FA, except cc\n";
+            cerr << "Areas: general bstats control data tsbpd rexmit haicrypt cc\n";
+            cerr << "Default: all are on except haicrypt. NOTE: 'general' can't be off.\n\n";
             cerr << "List of functional areas:\n";
 
             map<int, string> revmap;
             for (auto entry: SrtLogFAList())
                 revmap[entry.second] = entry.first;
 
-            // Each group on a new line
             int en10 = 0;
             for (auto entry: revmap)
             {
@@ -290,7 +289,7 @@ int parse_args(LiveTransmitConfig &cfg, int argc, char** argv)
         PrintOptionHelp(o_statsout,  "<filename>", "output stats to file");
         PrintOptionHelp(o_statspf,   "<format=default>", "stats printing format {json, csv, default}");
         PrintOptionHelp(o_statsfull, "", "full counters in stats-report (prints total statistics)");
-        PrintOptionHelp(o_loglevel,  "<level=warn>", "log level {fatal,error,warn,note,info,debug}");
+        PrintOptionHelp(o_loglevel,  "<level=error>", "log level {fatal,error,info,note,warning}");
         PrintOptionHelp(o_logfa,     "<fas>", "log functional area (see '-h logging' for more info)");
         //PrintOptionHelp(o_log_internal, "", "use internal logger");
         PrintOptionHelp(o_logfile, "<filename="">", "write logs to file");
@@ -335,8 +334,7 @@ int parse_args(LiveTransmitConfig &cfg, int argc, char** argv)
     cfg.stats_report = Option<OutNumber>(params, o_statsrep);
     cfg.stats_out    = Option<OutString>(params, o_statsout);
     const string pf  = Option<OutString>(params, "default", o_statspf);
-    string pfext;
-    cfg.stats_pf     = ParsePrintFormat(pf, (pfext));
+    cfg.stats_pf     = ParsePrintFormat(pf);
     if (cfg.stats_pf == SRTSTATS_PROFMAT_INVALID)
     {
         cfg.stats_pf = SRTSTATS_PROFMAT_2COLS;
@@ -345,7 +343,7 @@ int parse_args(LiveTransmitConfig &cfg, int argc, char** argv)
     }
 
     cfg.full_stats   = OptionPresent(params, o_statsfull);
-    cfg.loglevel     = SrtParseLogLevel(Option<OutString>(params, "warn", o_loglevel));
+    cfg.loglevel     = SrtParseLogLevel(Option<OutString>(params, "error", o_loglevel));
     cfg.logfas       = SrtParseLogFA(Option<OutString>(params, "", o_logfa));
     cfg.log_internal = OptionPresent(params, o_log_internal);
     cfg.logfile      = Option<OutString>(params, o_logfile);
@@ -403,12 +401,8 @@ int main(int argc, char** argv)
     // Set SRT log levels and functional areas
     //
     srt_setloglevel(cfg.loglevel);
-    if (!cfg.logfas.empty())
-    {
-        srt_resetlogfa(nullptr, 0);
-        for (set<srt_logging::LogFA>::iterator i = cfg.logfas.begin(); i != cfg.logfas.end(); ++i)
-            srt_addlogfa(*i);
-    }
+    for (set<srt_logging::LogFA>::iterator i = cfg.logfas.begin(); i != cfg.logfas.end(); ++i)
+        srt_addlogfa(*i);
 
     //
     // SRT log handler
