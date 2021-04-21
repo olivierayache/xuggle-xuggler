@@ -250,6 +250,14 @@ namespace com { namespace xuggle { namespace xuggler
      * @since 3.0
      */
     virtual void setParseType(ParseType type)=0;
+    
+    /**
+     * Set a bitstream filter on this stream
+     * 
+     * @param name The name of bitstream filter
+     * @since 6.0
+     */
+    virtual int setBitstreamFilter(const char* name)=0;
 
     /*
      * Added for 3.1

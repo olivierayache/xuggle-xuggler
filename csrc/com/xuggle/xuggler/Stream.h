@@ -73,10 +73,14 @@ namespace com { namespace xuggle { namespace xuggler
     virtual IContainer* getContainer();
     virtual IStream::ParseType getParseType();
     virtual void setParseType(ParseType type);
+    
+    virtual int setBitstreamFilter(const char* name);
 
     virtual int32_t setStreamCoder(IStreamCoder *coder);
     
     virtual AVStream* getAVStream() { return mStream; }
+    
+    virtual AVBSFContext* getAVBsfContext() { return mBsfContext; }
     
     virtual IMetaData* getMetaData();
     virtual void setMetaData(IMetaData* metaData);
@@ -97,6 +101,7 @@ namespace com { namespace xuggle { namespace xuggler
 
   private:
     void reset();
+    AVBSFContext *mBsfContext;
     AVStream *mStream;
     Direction mDirection;
     StreamCoder* mCoder;

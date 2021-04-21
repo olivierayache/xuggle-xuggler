@@ -42,6 +42,7 @@ namespace com { namespace xuggle { namespace xuggler
   Stream :: Stream()
   {
     mStream = 0;
+    mBsfContext = 0;
     mDirection = INBOUND;
     mCoder = 0;
     mContainer = 0;
@@ -67,6 +68,9 @@ namespace com { namespace xuggle { namespace xuggler
     // We don't keep a reference to the container to avoid a ref-count loop
     // and so we don't release.
     mContainer = 0;
+    if (mBsfContext) {
+        av_bsf_free(&mBsfContext);
+    }
   }
   Stream*
   Stream :: make(Container *container, AVStream * aStream, Direction direction,const AVCodec* avCodec)
@@ -123,7 +127,8 @@ namespace com { namespace xuggle { namespace xuggler
     IRational * result = 0;
     if (mStream)
     {
-      result = Rational::make(&mStream->r_frame_rate);
+      AVRational f = av_guess_frame_rate(NULL, mStream, NULL);  
+      result = Rational::make(&f);
     }
     return result;
   }
@@ -327,6 +332,36 @@ namespace com { namespace xuggle { namespace xuggler
     if (mStream) {
       mStream->need_parsing = (enum AVStreamParseType)type;
     }
+  }
+  
+  int
+  Stream :: setBitstreamFilter(const char* name)
+  {
+    
+    int ret = -1;
+    if (mStream) {
+        if (!mBsfContext) {
+            const AVBitStreamFilter* filter = av_bsf_get_by_name(name);
+            if (filter) {
+                if (ret = av_bsf_alloc(filter, &mBsfContext) == 0) {
+                    if (ret = avcodec_parameters_copy(mBsfContext->par_in, mStream->codecpar) >= 0) {
+			mBsfContext->time_base_in = mStream->time_base;
+                        if (ret = av_bsf_init(mBsfContext) < 0) {
+				VS_LOG_ERROR("BSF INIT FAIL");
+				av_bsf_free(&mBsfContext);
+				return ret;
+			}    
+			VS_LOG_ERROR("BSF OK");
+                    }
+                }
+            }
+
+        } else {
+            VS_LOG_ERROR("Bistream filter already set on this stream");
+        }
+    }
+    
+    return ret;
   }
   
   IMetaData*
