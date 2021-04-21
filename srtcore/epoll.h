@@ -60,7 +60,7 @@ modified by
 #include "udt.h"
 
 
-class CEPollDesc
+struct CEPollDesc
 {
    const int m_iID;                                // epoll ID
 
@@ -143,6 +143,8 @@ class CEPollDesc
 std::string DisplayEpollWatch();
 #endif
 
+private:
+
    /// Sockets that are subscribed for events in this eid.
    ewatch_t m_USockWatchState;
 
@@ -157,10 +159,7 @@ std::string DisplayEpollWatch();
 
    enotice_t::iterator nullNotice() { return m_USockEventNotice.end(); }
 
-   // Only CEPoll class should have access to it.
-   // Guarding private access to the class is not necessary
-   // within the epoll module.
-   friend class CEPoll;
+public:
 
    CEPollDesc(int id, int localID)
        : m_iID(id)
@@ -424,9 +423,6 @@ public: // for CUDTUnited API
    /// @retval >=0 number of ready sockets (actually size of `st`)
    int swait(CEPollDesc& d, fmap_t& st, int64_t msTimeOut, bool report_by_exception = true);
 
-   /// Empty subscription check - for internal use only.
-   bool empty(const CEPollDesc& d) const;
-
    /// Reports which events are ready on the given socket.
    /// @param mp socket event map retirned by `swait`
    /// @param sock which socket to ask
@@ -469,13 +465,12 @@ public: // for CUDTUnited API
 
 public: // for CUDT to acknowledge IO status
 
-   /// Update events available for a UDT socket. At the end this function
-   /// counts the number of updated EIDs with given events.
+   /// Update events available for a UDT socket.
    /// @param [in] uid UDT socket ID.
    /// @param [in] eids EPoll IDs to be set
    /// @param [in] events Combination of events to update
    /// @param [in] enable true -> enable, otherwise disable
-   /// @return -1 if invalid events, otherwise the number of changes
+   /// @return 0 if success, otherwise an error number
 
    int update_events(const SRTSOCKET& uid, std::set<int>& eids, int events, bool enable);
 
@@ -486,7 +481,7 @@ private:
    srt::sync::Mutex m_SeedLock;
 
    std::map<int, CEPollDesc> m_mPolls;       // all epolls
-   mutable srt::sync::Mutex m_EPollLock;
+   srt::sync::Mutex m_EPollLock;
 };
 
 #if ENABLE_HEAVY_LOGGING

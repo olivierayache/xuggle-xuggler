@@ -7,7 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  */
-#include "platform_sys.h"
 
 #include <iomanip>
 #include <stdexcept>
@@ -34,22 +33,26 @@ std::string FormatTime(const steady_clock::time_point& timestamp)
     if (is_zero(timestamp))
     {
         // Use special string for 0
-        return "00:00:00.000000 [STDY]";
+        return "00:00:00.000000";
     }
 
-    const int decimals = clockSubsecondPrecision();
-    const uint64_t total_sec = count_seconds(timestamp.time_since_epoch());
-    const uint64_t days = total_sec / (60 * 60 * 24);
+    const uint64_t total_us  = count_microseconds(timestamp.time_since_epoch());
+    const uint64_t us        = total_us % 1000000;
+    const uint64_t total_sec = total_us / 1000000;
+
+    const uint64_t days  = total_sec / (60 * 60 * 24);
     const uint64_t hours = total_sec / (60 * 60) - days * 24;
+
     const uint64_t minutes = total_sec / 60 - (days * 24 * 60) - hours * 60;
     const uint64_t seconds = total_sec - (days * 24 * 60 * 60) - hours * 60 * 60 - minutes * 60;
+
     ostringstream out;
     if (days)
         out << days << "D ";
-    out << setfill('0') << setw(2) << hours << ":"
-        << setfill('0') << setw(2) << minutes << ":"
-        << setfill('0') << setw(2) << seconds << "."
-        << setfill('0') << setw(decimals) << (timestamp - seconds_from(total_sec)).time_since_epoch().count() << " [STDY]";
+    out << setfill('0') << setw(2) << hours << ":" 
+        << setfill('0') << setw(2) << minutes << ":" 
+        << setfill('0') << setw(2) << seconds << "." 
+        << setfill('0') << setw(6) << us << " [STD]";
     return out.str();
 }
 
@@ -66,7 +69,7 @@ std::string FormatTimeSys(const steady_clock::time_point& timestamp)
     strftime(tmp_buf, 512, "%X.", &tm);
 
     ostringstream out;
-    out << tmp_buf << setfill('0') << setw(6) << (count_microseconds(timestamp.time_since_epoch()) % 1000000) << " [SYST]";
+    out << tmp_buf << setfill('0') << setw(6) << (count_microseconds(timestamp.time_since_epoch()) % 1000000) << " [SYS]";
     return out.str();
 }
 

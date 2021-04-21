@@ -102,7 +102,7 @@ SocketOption::Mode SrtConfigurePre(SRTSOCKET socket, string host, map<string, st
 
 
     bool all_clear = true;
-    for (const auto &o: srt_options)
+    for (auto o: srt_options)
     {
         if ( o.binding == SocketOption::PRE && options.count(o.name) )
         {
@@ -124,7 +124,7 @@ void SrtConfigurePost(SRTSOCKET socket, map<string, string> options, vector<stri
     vector<string> dummy;
     vector<string>& fails = failures ? *failures : dummy;
 
-    for (const auto &o: srt_options)
+    for (auto o: srt_options)
     {
         if ( o.binding == SocketOption::POST && options.count(o.name) )
         {

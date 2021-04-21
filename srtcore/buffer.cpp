@@ -575,6 +575,8 @@ int CSndBuffer::readData(const int offset, CPacket& w_packet, steady_clock::time
     // the packet originally (the other overload of this function) must set these
     // flags.
     w_packet.m_iMsgNo = p->m_iMsgNoBitset;
+
+    // TODO: FR #930. Use source time if it is provided.
     w_srctime = getSourceTime(*p);
 
     // This function is called when packet retransmission is triggered.
@@ -933,7 +935,7 @@ int CRcvBuffer::readBuffer(char* data, int len)
                 break; /* too early for this unit, return whatever was copied */
         }
 
-        const int pktlen = (int) pkt.getLength();
+        const int pktlen = pkt.getLength();
         const int remain_pktlen = pktlen - m_iNotch;
 
         const int unitsize = std::min(remain_pktlen, rs);
@@ -994,7 +996,7 @@ int CRcvBuffer::readBufferToFile(fstream& ofs, int len)
 #if ENABLE_LOGGING
         trace_seq = pkt.getSeqNo();
 #endif
-        const int pktlen = (int) pkt.getLength();
+        const int pktlen = pkt.getLength();
         const int remain_pktlen = pktlen - m_iNotch;
 
         const int unitsize = std::min(remain_pktlen, rs);
@@ -2064,15 +2066,15 @@ int CRcvBuffer::readMsg(char* data, int len, SRT_MSGCTRL& w_msgctl, int upto)
 }
 
 #ifdef SRT_DEBUG_TSBPD_OUTJITTER
-void CRcvBuffer::debugTraceJitter(time_point playtime)
+void CRcvBuffer::debugTraceJitter(int64_t rplaytime)
 {
-    uint64_t ms = count_microseconds(steady_clock::now() - playtime);
-    if (ms / 10 < 10)
-        m_ulPdHisto[0][ms / 10]++;
-    else if (ms / 100 < 10)
-        m_ulPdHisto[1][ms / 100]++;
-    else if (ms / 1000 < 10)
-        m_ulPdHisto[2][ms / 1000]++;
+    uint64_t now = CTimer::getTime();
+    if ((now - rplaytime) / 10 < 10)
+        m_ulPdHisto[0][(now - rplaytime) / 10]++;
+    else if ((now - rplaytime) / 100 < 10)
+        m_ulPdHisto[1][(now - rplaytime) / 100]++;
+    else if ((now - rplaytime) / 1000 < 10)
+        m_ulPdHisto[2][(now - rplaytime) / 1000]++;
     else
         m_ulPdHisto[3][1]++;
 }
@@ -2105,7 +2107,7 @@ bool CRcvBuffer::accessMsg(int& w_p, int& w_q, bool& w_passack, int64_t& w_playt
             // so in one "unit".
             w_p = w_q = m_iStartPos;
 
-            debugTraceJitter(play_time);
+            debugTraceJitter(w_playtime);
         }
     }
     else
@@ -2295,7 +2297,7 @@ bool CRcvBuffer::scanMsg(int& w_p, int& w_q, bool& w_passack)
         }
 
         rmpkts++;
-        rmbytes += (int) freeUnitAt((size_t) m_iStartPos);
+        rmbytes += freeUnitAt(m_iStartPos);
 
         m_iStartPos = shiftFwd(m_iStartPos);
     }

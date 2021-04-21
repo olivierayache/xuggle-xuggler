@@ -116,7 +116,7 @@ ENOMEM: There was insufficient memory to create the kernel object.
        */
    if (localid < 0)
       throw CUDTException(MJ_SETUP, MN_NONE, errno);
-   #elif defined(BSD) || TARGET_OS_MAC
+   #elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
    localid = kqueue();
    if (localid < 0)
       throw CUDTException(MJ_SETUP, MN_NONE, errno);
@@ -216,7 +216,7 @@ int CEPoll::add_ssock(const int eid, const SYSSOCKET& s, const int* events)
    ev.data.fd = s;
    if (::epoll_ctl(p->second.m_iLocalID, EPOLL_CTL_ADD, s, &ev) < 0)
       throw CUDTException();
-#elif defined(BSD) || TARGET_OS_MAC
+#elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
    struct kevent ke[2];
    int num = 0;
 
@@ -272,7 +272,7 @@ int CEPoll::remove_ssock(const int eid, const SYSSOCKET& s)
    epoll_event ev;  // ev is ignored, for compatibility with old Linux kernel only.
    if (::epoll_ctl(p->second.m_iLocalID, EPOLL_CTL_DEL, s, &ev) < 0)
       throw CUDTException();
-#elif defined(BSD) || TARGET_OS_MAC
+#elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
    struct kevent ke;
 
    //
@@ -391,7 +391,7 @@ int CEPoll::update_ssock(const int eid, const SYSSOCKET& s, const int* events)
    ev.data.fd = s;
    if (::epoll_ctl(p->second.m_iLocalID, EPOLL_CTL_MOD, s, &ev) < 0)
       throw CUDTException();
-#elif defined(BSD) || TARGET_OS_MAC
+#elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
    struct kevent ke[2];
    int num = 0;
 
@@ -604,11 +604,10 @@ int CEPoll::wait(const int eid, set<SRTSOCKET>* readfds, set<SRTSOCKET>* writefd
             HLOGC(ealog.Debug, log << "CEPoll::wait: REPORTED " << total << "/" << total_noticed
                     << debug_sockets.str());
 
-            if ((lrfds || lwfds) && !ed.m_sLocals.empty())
+            if (lrfds || lwfds)
             {
 #ifdef LINUX
                 const int max_events = ed.m_sLocals.size();
-                SRT_ASSERT(max_events > 0);
                 epoll_event ev[max_events];
                 int nfds = ::epoll_wait(ed.m_iLocalID, ev, max_events, 0);
 
@@ -628,10 +627,9 @@ int CEPoll::wait(const int eid, set<SRTSOCKET>* readfds, set<SRTSOCKET>* writefd
                 }
                 HLOGC(ealog.Debug, log << "CEPoll::wait: LINUX: picking up " << (total - prev_total)  << " ready fds.");
 
-#elif defined(BSD) || TARGET_OS_MAC
+#elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
                 struct timespec tmout = {0, 0};
                 const int max_events = ed.m_sLocals.size();
-                SRT_ASSERT(max_events > 0);
                 struct kevent ke[max_events];
 
                 int nfds = kevent(ed.m_iLocalID, NULL, 0, ke, max_events, &tmout);
@@ -808,12 +806,6 @@ int CEPoll::swait(CEPollDesc& d, map<SRTSOCKET, int>& st, int64_t msTimeOut, boo
     return 0;
 }
 
-bool CEPoll::empty(const CEPollDesc& d) const
-{
-    ScopedLock lg (m_EPollLock);
-    return d.watch_empty();
-}
-
 int CEPoll::release(const int eid)
 {
    ScopedLock pg(m_EPollLock);
@@ -825,7 +817,7 @@ int CEPoll::release(const int eid)
    #ifdef LINUX
    // release local/system epoll descriptor
    ::close(i->second.m_iLocalID);
-   #elif defined(BSD) || TARGET_OS_MAC
+   #elif defined(BSD) || defined(OSX) || (TARGET_OS_IOS == 1) || (TARGET_OS_TV == 1)
    ::close(i->second.m_iLocalID);
    #endif
 
@@ -844,7 +836,6 @@ int CEPoll::update_events(const SRTSOCKET& uid, std::set<int>& eids, const int e
         return -1; // still, ignored.
     }
 
-    int nupdated = 0;
     vector<int> lost;
 
     IF_HEAVY_LOGGING(ostringstream debug);
@@ -908,7 +899,6 @@ int CEPoll::update_events(const SRTSOCKET& uid, std::set<int>& eids, const int e
         // - if enable, it will set event flags, possibly in a new notice object
         // - if !enable, it will clear event flags, possibly remove notice if resulted in 0
         ed.updateEventNotice(*pwait, uid, events, enable);
-        ++nupdated;
 
         HLOGC(eilog.Debug, log << debug.str() << ": E" << (*i)
                 << " TRACKING: " << ed.DisplayEpollWatch());
@@ -917,7 +907,7 @@ int CEPoll::update_events(const SRTSOCKET& uid, std::set<int>& eids, const int e
     for (vector<int>::iterator i = lost.begin(); i != lost.end(); ++ i)
         eids.erase(*i);
 
-    return nupdated;
+    return 0;
 }
 
 // Debug use only.
