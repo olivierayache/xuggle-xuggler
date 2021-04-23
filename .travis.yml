@@ -3,6 +3,12 @@ language: java
 os:
   - linux
   - osx
+  
+jobs:
+  include:
+    - os: linux
+    - os: osx
+      osx_image: xcode9.3
 
 cache:
   directories:
