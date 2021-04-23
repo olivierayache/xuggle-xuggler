@@ -14,6 +14,7 @@ cache:
 addons:
   homebrew:
     packages:
+      - ant@1.9
       - yasm
       - nasm
   apt:
