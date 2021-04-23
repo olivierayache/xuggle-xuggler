@@ -12,6 +12,7 @@ cache:
   - $TRAVIS_BUILD_DIR/build/native/x86_64-apple-darwin17.4.0
   
 addons:
+  update: true
   homebrew:
     packages:
       - ant@1.9
