@@ -24,4 +24,4 @@ jobs:
     - name: Install build deps
       run: brew install yasm; brew install nasm; brew install swig  
     - name: Build with Ant
-      run: ant -Dbuild.configure.maintainer=true clean stage
+      run: ant -Dbuild.configure=--enable-swig clean stage
