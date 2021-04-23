@@ -24,4 +24,4 @@ jobs:
     - name: Install build deps
       run: sudo apt-get install yasm; sudo apt-get install nasm  
     - name: Build with Ant
-      run: ant clean stage
+      run: ant -Dbuild.configure.maintainer=true clean stage
