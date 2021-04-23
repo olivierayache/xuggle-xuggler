@@ -22,6 +22,6 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
     - name: Install build deps
-      run: brew install yasm; brew install nasm  
+      run: brew install yasm; brew install nasm; brew install swig  
     - name: Build with Ant
       run: ant -Dbuild.configure.maintainer=true clean stage
