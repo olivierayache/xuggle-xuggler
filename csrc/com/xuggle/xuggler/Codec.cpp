@@ -181,13 +181,13 @@ namespace com { namespace xuggle { namespace xuggler
   bool
   Codec :: canDecode()
   {
-    return mCodec ? mCodec->decode : false;
+    return mCodec ? (mCodec->decode != NULL) : false;
   }
 
   bool
   Codec :: canEncode()
   {
-    return mCodec ? mCodec->encode2 : false;
+    return mCodec ? (mCodec->encode2 != NULL) : false;
   }
 
   Codec*
