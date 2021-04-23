@@ -1,12 +1,20 @@
+os:
+  - linux
+  - osx
 cache:
   directories:
   - $TRAVIS_BUILD_DIR/build/native/x86_64-unknown-linux-gnu
+  - $TRAVIS_BUILD_DIR/build/native/x86_64-apple-darwin19.4.0
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y yasm
-  - sudo apt-get install -y nasm
-  - sudo apt-get install -y automake1.11
-  - cd $TRAVIS_BUILD_DIR/build/native/x86_64-unknown-linux-gnu
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update          ; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install yasm; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install nasm; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -qq update; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y yasm; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y nasm; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y automake1.11; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cd $TRAVIS_BUILD_DIR/build/native/x86_64-unknown-linux-gnu; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then cd $TRAVIS_BUILD_DIR/build/native/x86_64-apple-darwin19.4.0; fi
   - ls -lh
   - find . -name Makefile -exec touch {} \;
   - find . -name *.o -exec touch {} \;
