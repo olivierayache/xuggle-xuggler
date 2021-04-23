@@ -22,6 +22,6 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
     - name: Install build deps
-      run: apt-get install yasm; apt-get install nasm  
+      run: sudo apt-get install yasm; sudo apt-get install nasm  
     - name: Build with Ant
       run: ant clean stage
