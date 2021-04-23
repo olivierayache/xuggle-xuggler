@@ -5,7 +5,6 @@ jobs:
     os:
       - linux
       - osx
-        osx_image: xcode9.3
 
 cache:
   directories:
