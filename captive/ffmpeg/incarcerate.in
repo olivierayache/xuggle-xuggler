@@ -25,6 +25,7 @@ FFMPEG_OPTIONS="$FFMPEG_OPTIONS --extra-ldflags=-L@abs_top_builddir@/stage@libdi
 # Set up a place where pkg-config looks for installed packages
 export PKG_CONFIG_PATH="@abs_top_builddir@/stage@libdir@/pkgconfig"
 
+FFMPEG_OPTIONS="$FFMPEG_OPTIONS --disable-programs" 
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --disable-shared"
 FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-pic"
 #FFMPEG_OPTIONS="$FFMPEG_OPTIONS --enable-runtime-cpudetect"
