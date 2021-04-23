@@ -1,6 +1,8 @@
 os:
   - linux
   - osx
+jdk:
+  - openjdk8
 cache:
   directories:
   - $TRAVIS_BUILD_DIR/build/native/x86_64-unknown-linux-gnu
