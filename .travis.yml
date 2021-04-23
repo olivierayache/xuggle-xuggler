@@ -1,10 +1,8 @@
 language: java
 
-jobs:
-  include:
-    os:
-      - linux
-      - osx
+os:
+  - linux
+  - osx
 
 cache:
   directories:
