@@ -24,4 +24,4 @@ jobs:
     - name: Install build deps
       run: sudo apt-get install yasm; sudo apt-get install nasm; sudo apt-get install swig  
     - name: Build with Ant
-      run: ant -Dbuild.configure=--enable-swig clean stage
+      run: ant -Dbuild.configure="--enable-swig --disable-gpl --enable-version3" clean stage
