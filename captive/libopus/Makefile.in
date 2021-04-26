@@ -465,8 +465,7 @@ all-local: incarcerate-package
 	@echo "Incarcerating package $(srcdir) to fake DESTDIR=$(vs_captive_prefix)"
 	@cd csrc && \
 	  $(MAKE) && \
-	  DESTDIR="$(vs_captive_prefix)" $(MAKE) install) \
-
+	  DESTDIR="$(vs_captive_prefix)" $(MAKE) install 
 	@echo "Incarceration complete: $(srcdir)"
 
 dist-hook:
