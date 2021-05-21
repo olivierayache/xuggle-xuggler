@@ -22,6 +22,6 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
     - name: Install build deps
-      run: brew install yasm; brew install nasm; brew install swig; brew install automake@1.15  
+      run: brew install yasm; brew install nasm; brew install swig; brew install automake  
     - name: Build with Ant
       run: ant -Dbuild.configure="--enable-swig --disable-gpl --enable-version3" clean stage
