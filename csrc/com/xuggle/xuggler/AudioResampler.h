@@ -38,7 +38,7 @@ namespace com { namespace xuggle { namespace xuggler
     virtual int getInputChannels();
     virtual int getInputRate();
     virtual int resample(IAudioSamples *pOutputSamples, IAudioSamples *pInputSamples,
-        unsigned int numSamples);
+        int32_t numSamples);
 
     virtual IAudioSamples::Format getOutputFormat();
     virtual IAudioSamples::Format getInputFormat();

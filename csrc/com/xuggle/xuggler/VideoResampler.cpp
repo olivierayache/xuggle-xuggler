@@ -100,8 +100,8 @@ namespace com { namespace xuggle { namespace xuggler
   VideoResampler :: resample(IVideoPicture* pOutFrame, IVideoPicture* pInFrame)
   {
     int32_t retval = -1;
-    VideoPicture* outFrame = dynamic_cast<VideoPicture*>(pOutFrame);
-    VideoPicture* inFrame  = dynamic_cast<VideoPicture*>(pInFrame);
+    VideoPicture* outFrame = static_cast<VideoPicture*>(pOutFrame);
+    VideoPicture* inFrame  = static_cast<VideoPicture*>(pInFrame);
     try
     {
       if (!outFrame)

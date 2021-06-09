@@ -84,7 +84,7 @@ namespace com { namespace xuggle { namespace xuggler
      * @return Number of samples written to outputSamples, or <0 on error.
      */
     virtual int resample(IAudioSamples *outputSamples, IAudioSamples *inputSamples,
-        unsigned int numSamples)=0;
+        int32_t numSamples)=0;
     
     /**
      * Create a new {@link IAudioResampler} object.

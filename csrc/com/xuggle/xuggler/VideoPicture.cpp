@@ -26,7 +26,10 @@
 #include "com/xuggle/xuggler/VideoPicture.h"
 
 extern "C" {
-#include <libavcodec/mediacodec.h>    
+#include <libavcodec/mediacodec.h> 
+#ifdef __APPLE__
+#include <CoreMedia/CMSampleBuffer.h>
+#endif
 }
 
 VS_LOG_SETUP(VS_CPP_PACKAGE);
@@ -47,6 +50,11 @@ namespace com { namespace xuggle { namespace xuggler
 
     mFrame->format = (int) IPixelFormat::NONE;
     mTimeBase = IRational::make(1, 1000000);
+
+#ifdef __APPLE__
+    mCMSampleBuffer = NULL;
+#endif
+    
   }
 
   VideoPicture :: ~VideoPicture()
@@ -54,6 +62,13 @@ namespace com { namespace xuggle { namespace xuggler
     if (mFrame)
       av_free(mFrame);
     mFrame = 0;
+    mBuffer = 0;
+    mTimeBase = 0;
+#ifdef __APPLE__
+    if (mCMSampleBuffer){
+        CFRelease(mCMSampleBuffer);
+    }
+#endif
   }
 
   VideoPicture*
@@ -148,7 +163,7 @@ namespace com { namespace xuggle { namespace xuggler
       if (!srcFrame->isComplete())
         throw std::runtime_error("source frame is not complete");
 
-      VideoPicture* src = dynamic_cast<VideoPicture*>(srcFrame);
+      VideoPicture* src = static_cast<VideoPicture*>(srcFrame);
       if (!src)
         throw std::runtime_error("src frame is not of right subtype");
 
@@ -204,14 +219,40 @@ namespace com { namespace xuggle { namespace xuggler
   }
               
   void 
-  VideoPicture::render() {
+  VideoPicture::render(bool drop, int64_t timeStamp) {
       if (mFrame && (av_pix_fmt_desc_get((AVPixelFormat) mFrame->format)->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
-        #if CONFIG_HEVC_MEDIA_DECODER
-          mediacodec_render_frame(mFrame);
+        #ifdef __ANDROID__
+          mediacodec_render_frame(mFrame, timeStamp, drop);
+        #elif __APPLE__
+          CVImageBufferRef image = (CVImageBufferRef) mFrame->data[3];
+          CMVideoFormatDescriptionRef formatDescription;
+          if (mCMSampleBuffer){
+              CFRelease(mCMSampleBuffer);
+          }
+          CMTime duration = kCMTimeIndefinite;
+          CMTime pts = CMTimeMake(timeStamp , 1000000000);
+          const CMSampleTimingInfo timingInfo = {
+                        .decodeTimeStamp = kCMTimeInvalid,
+                        .duration = duration,
+                        .presentationTimeStamp = pts
+                    };
+          CMVideoFormatDescriptionCreateForImageBuffer(NULL, image, &formatDescription);
+          CMSampleBufferCreateReadyWithImageBuffer(NULL, image, formatDescription, &timingInfo, &mCMSampleBuffer);
+          return sampleBuffer;
         #endif
       }
   }
 
+  void*
+  VideoPicture :: getOpaqueData()
+  {
+    #ifdef __APPLE__
+      return mCMSampleBuffer;
+    #endif
+
+    return NULL;
+  }
+  
   void
   VideoPicture :: fillAVFrame(AVFrame *frame)
   {
@@ -468,4 +509,12 @@ namespace com { namespace xuggle { namespace xuggler
     if (mFrame)
       mFrame->pict_type = (enum AVPictureType) type;
   }
+  
+  void
+  VideoPicture::setSideData(IVideoPicture::FrameDataType type, com::xuggle::ferry::IBuffer* buffer) {
+      if (mFrame){
+        av_frame_new_side_data(mFrame, (AVFrameSideDataType)type, buffer->getSize());
+      }
+  }
+
 }}}

@@ -135,7 +135,7 @@ public class TestAudioSamplesGenerator
         IAudioSamples.Format.FMT_S16
     });
     
-    samples.setComplete(true, samplesToGen, mSampleRate, mNumChannels,
+    samples.setComplete(true, (int)samplesToGen, mSampleRate, mNumChannels,
         IAudioSamples.Format.FMT_S16,
         startingPts);
   }

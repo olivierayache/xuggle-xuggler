@@ -145,9 +145,9 @@ StreamCoder :: readyAVContexts(
     if (avCodec) {
       aCoder->mCodec = Codec::make(avCodec);
     } else if (aDirection == ENCODING) {
-      aCoder->mCodec = dynamic_cast<Codec*>(ICodec::findEncodingCodecByIntID(avContext->codec_id));
+      aCoder->mCodec = static_cast<Codec*>(ICodec::findEncodingCodecByIntID(avContext->codec_id));
     } else {
-      aCoder->mCodec = dynamic_cast<Codec*>(ICodec::findDecodingCodecByIntID(avContext->codec_id));
+      aCoder->mCodec = static_cast<Codec*>(ICodec::findDecodingCodecByIntID(avContext->codec_id));
     }
   } else
     aCoder->mCodec.reset(aCodec, true);
@@ -203,7 +203,7 @@ StreamCoder :: readyAVContexts(
 void
 StreamCoder::setCodec(ICodec * aCodec)
 {
-  Codec* codec = dynamic_cast<Codec*>(aCodec);
+  Codec* codec = static_cast<Codec*>(aCodec);
   const AVCodec* avCodec = NULL;
 
   if (!codec) {
@@ -328,7 +328,7 @@ StreamCoder *
 StreamCoder::make(Direction direction, IStreamCoder* aCoder)
 {
   StreamCoder *retval = NULL;
-  StreamCoder *coder = dynamic_cast<StreamCoder*> (aCoder);
+  StreamCoder *coder = static_cast<StreamCoder*> (aCoder);
 
   try
   {
@@ -598,6 +598,9 @@ StreamCoder::getNextPredictedPts()
 IRational*
 StreamCoder::getFrameRate()
 {
+  if (mCodecContext && mCodecContext->framerate.num > 0) {
+      return Rational::make(&mCodecContext->framerate);
+  }  
   return (mStream ? mStream->getFrameRate() : 0);
 }
 
@@ -777,7 +780,7 @@ StreamCoder::open(IMetaData* aOptions, IMetaData* aUnsetOptions)
 
     // Time to set options
     if (aOptions) {
-        MetaData* options = dynamic_cast<MetaData*>(aOptions);
+        MetaData* options = static_cast<MetaData*>(aOptions);
         if (!options)
           throw new std::runtime_error("wow... who's passing us crap?");
 
@@ -874,7 +877,7 @@ StreamCoder::open(IMetaData* aOptions, IMetaData* aUnsetOptions)
     }
     if (aUnsetOptions)
     {
-      MetaData* unsetOptions = dynamic_cast<MetaData*>(aUnsetOptions);
+      MetaData* unsetOptions = static_cast<MetaData*>(aUnsetOptions);
       if (!unsetOptions)
         throw std::runtime_error("really... seriously?");
       unsetOptions->copy(tmp);
@@ -913,8 +916,8 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
     int32_t startingByte)
 {
   int32_t retval = -1;
-  AudioSamples *samples = dynamic_cast<AudioSamples*> (pOutSamples);
-  Packet* packet = dynamic_cast<Packet*> (pPacket);
+  AudioSamples *samples = static_cast<AudioSamples*> (pOutSamples);
+  Packet* packet = static_cast<Packet*> (pPacket);
 
   if (samples)
     // reset the samples
@@ -924,10 +927,10 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
     VS_LOG_WARN("Attempting to decode when not ready; no samples");
     return retval;
   }
-  if (!packet) {
-    VS_LOG_WARN("Attempting to decode when not ready; no packet");
-    return retval;
-  }
+//  if (!packet) {
+//    VS_LOG_WARN("Attempting to decode when not ready; no packet");
+//    return retval;
+//  }
   if (!mOpened) {
     VS_LOG_WARN("Attempting to decode when not ready; codec not opened");
     return retval;
@@ -957,24 +960,30 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
   // to be at least this long.
   samples->ensureCapacity(192000); //AVCODEC_MAX_AUDIO_FRAME_SIZE
   outBufSize = samples->getMaxBufferSize();
-  inBufSize = packet->getSize() - startingByte;
+  if (packet)
+    inBufSize = packet->getSize() - startingByte;
 
   if (inBufSize > 0 && outBufSize > 0 || mCodec->getAVCodec()->capabilities & AV_CODEC_CAP_DELAY)
   {
-    RefPointer<IBuffer> buffer = packet->getData();
+    
     uint8_t * inBuf = 0;
     uint8_t * outBuf = 0;
-    uint16_t outChannelLayout; 
+    uint64_t outChannelLayout; 
+    AVFrame* frame = av_frame_alloc();
 
-    VS_ASSERT(buffer, "no buffer in packet!");
-    if (buffer)
-      inBuf = (uint8_t*) buffer->getBytes(startingByte, inBufSize);
+    if (packet)
+    {
+      RefPointer<IBuffer> buffer = packet->getData();
+      VS_ASSERT(buffer, "no buffer in packet!");
+      if (buffer)
+        inBuf = (uint8_t*) buffer->getBytes(startingByte, inBufSize);
+      VS_ASSERT(inBuf, "no in buffer");
+    }
 
     outBuf = (uint8_t*) samples->getRawSamples(0);
-
-    VS_ASSERT(inBuf, "no in buffer");
     VS_ASSERT(outBuf, "no out buffer");
-    if (outBuf && inBuf)
+    
+    if (outBuf)
     {
       VS_LOG_TRACE("Attempting decodeAudio(%p, %p, %d, %p, %d);",
           mCodecContext,
@@ -982,19 +991,25 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
           outBufSize,
           inBuf,
           inBufSize);
+      
       AVPacket pkt;
       av_init_packet(&pkt);
-      if (packet && packet->getAVPacket())
-        pkt = *packet->getAVPacket();
-      // copy in our buffer
-      pkt.data = inBuf;
-      pkt.size = inBufSize;
-
-      mCodecContext->reordered_opaque = packet->getPts();
+      pkt.data = NULL;
+      pkt.size = 0;
+ 
+      if (inBuf) 
+      {
+        if (packet && packet->getAVPacket())
+          pkt = *packet->getAVPacket();
+        // copy in our buffer
+        pkt.data = inBuf;
+        pkt.size = inBufSize;
+        mCodecContext->reordered_opaque = packet->getPts();
+      }
 
       
       {
-        AVFrame* frame = av_frame_alloc();
+        
         int got_frame = 0;
         retval = avcodec_decode_audio4(mCodecContext, frame, &got_frame, &pkt);
 //        char ch_layout[64];
@@ -1059,10 +1074,6 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
           }
         }   
 
-//        av_free_packet(&pkt);
-        av_frame_free(&frame);
-        
-        
       }
       VS_LOG_TRACE("Finished %d decodeAudio(%p, %p, %d, %p, %d);",
           retval,
@@ -1090,9 +1101,9 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
       if (!timeBase)
         timeBase = this->getTimeBase();
 
-      int64_t packetTs = packet->getPts();
-      if (packetTs == Global::NO_PTS)
-        packetTs = packet->getDts();
+      int64_t packetTs = frame->best_effort_timestamp;
+//      if (packetTs == Global::NO_PTS)
+//        packetTs = packet->getDts();
 
       if (packetTs == Global::NO_PTS && mFakeNextPts == Global::NO_PTS)
       {
@@ -1158,6 +1169,8 @@ StreamCoder::decodeAudio(IAudioSamples *pOutSamples, IPacket *pPacket,
       samples->setComplete(numSamples > 0, numSamples, getSampleRate(),
           getChannels(), (IAudioSamples::ChannelLayout)outChannelLayout, format, mFakeCurrPts);
     }
+    
+    av_frame_free(&frame);
   }
 
   return retval;
@@ -1168,8 +1181,8 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
     int32_t byteOffset)
 {
   int32_t retval = -1;
-  VideoPicture* frame = dynamic_cast<VideoPicture*> (pOutFrame);
-  Packet* packet = dynamic_cast<Packet*> (pPacket);
+  VideoPicture* frame = static_cast<VideoPicture*> (pOutFrame);
+  Packet* packet = static_cast<Packet*> (pPacket);
   if (frame)
     // reset the frame
     frame->setComplete(false, IPixelFormat::NONE, -1, -1, mFakeCurrPts);
@@ -1178,10 +1191,10 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
     VS_LOG_WARN("Attempting to decode when not ready; no frame");
     return retval;
   }
-  if (!packet) {
-    VS_LOG_WARN("Attempting to decode when not ready; no packet");
-    return retval;
-  }
+//  if (!packet) {
+//    VS_LOG_WARN("Attempting to decode when not ready; no packet");
+//    return retval;
+//  }
   if (!mOpened) {
     VS_LOG_WARN("Attempting to decode when not ready; codec not opened");
     return retval;
@@ -1206,34 +1219,39 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
   AVFrame *avFrame = av_frame_alloc();
   if (avFrame)
   {
-    RefPointer<IBuffer> buffer = packet->getData();
     int frameFinished = 0;
     int32_t inBufSize = 0;
     uint8_t * inBuf = 0;
+    if (packet) {
+      RefPointer<IBuffer> buffer = packet->getData();
+      inBufSize = packet->getSize() - byteOffset;
 
-    inBufSize = packet->getSize() - byteOffset;
+      VS_ASSERT(buffer, "no buffer in packet?");
+      if (buffer)
+        inBuf = (uint8_t*) buffer->getBytes(byteOffset, inBufSize);
 
-    VS_ASSERT(buffer, "no buffer in packet?");
-    if (buffer)
-      inBuf = (uint8_t*) buffer->getBytes(byteOffset, inBufSize);
-
-    VS_ASSERT(inBuf, "incorrect size or no data in packet");
-
+      VS_ASSERT(inBuf, "incorrect size or no data in packet");
+    }
+    
     if (inBufSize > 0 && inBuf || mCodec->getAVCodec()->capabilities & AV_CODEC_CAP_DELAY)
     {
-      VS_LOG_TRACE("Attempting decodeVideo(%p, %p, %d, %p, %d);",
-          mCodecContext,
-          avFrame,
-          frameFinished,
-          inBuf,
-          inBufSize);
       AVPacket pkt;
       av_init_packet(&pkt);
-      if (packet && packet->getAVPacket())
+      pkt.data = NULL;
+      pkt.size = 0;
+  
+      if (inBuf) {
+        VS_LOG_TRACE("Attempting decodeVideo(%p, %p, %d, %p, %d);",
+            mCodecContext,
+            avFrame,
+            frameFinished,
+            inBuf,
+            inBufSize);
+        if (packet && packet->getAVPacket())
           pkt = *packet->getAVPacket();
-      pkt.data = inBuf;
-      pkt.size = inBufSize;
-      
+        pkt.data = inBuf;
+        pkt.size = inBufSize;
+      }
       //mCodecContext->reordered_opaque = packet->getPts();
       retval = avcodec_decode_video2(mCodecContext, avFrame, &frameFinished,
           &pkt);
@@ -1259,7 +1277,7 @@ StreamCoder::decodeVideo(IVideoPicture *pOutFrame, IPacket *pPacket,
             if (!timeBase)
               timeBase = this->getTimeBase();
 
-            int64_t packetTs = avFrame->pts;
+            int64_t packetTs = avFrame->best_effort_timestamp;
 
             if (packetTs != Global::NO_PTS)
             {
@@ -1321,8 +1339,8 @@ StreamCoder::encodeVideo(IPacket *pOutPacket, IVideoPicture *pFrame,
     int32_t suggestedBufferSize)
 {
   int32_t retval = -1;
-  VideoPicture *frame = dynamic_cast<VideoPicture*> (pFrame);
-  Packet *packet = dynamic_cast<Packet*> (pOutPacket);
+  VideoPicture *frame = static_cast<VideoPicture*> (pFrame);
+  Packet *packet = static_cast<Packet*> (pOutPacket);
   RefPointer<IBuffer> encodingBuffer;
 
   try
@@ -1352,7 +1370,7 @@ StreamCoder::encodeVideo(IPacket *pOutPacket, IVideoPicture *pFrame,
     if (mCodecContext && mOpened && mDirection == ENCODING && packet)
     {
       uint8_t* buf = 0;
-      uint32_t bufLen = 0;
+      int32_t bufLen = 0;
 
       // First, get the right buffer size.
       if (suggestedBufferSize <= 0)
@@ -1539,11 +1557,11 @@ StreamCoder::encodeVideo(IPacket *pOutPacket, IVideoPicture *pFrame,
 
 int32_t
 StreamCoder::encodeAudio(IPacket * pOutPacket, IAudioSamples* pSamples,
-    uint32_t startingSample)
+    int32_t startingSample)
 {
   int32_t retval = -1;
-  AudioSamples *samples = dynamic_cast<AudioSamples*> (pSamples);
-  Packet *packet = dynamic_cast<Packet*> (pOutPacket);
+  AudioSamples *samples = static_cast<AudioSamples*> (pSamples);
+  Packet *packet = static_cast<Packet*> (pOutPacket);
   RefPointer<IBuffer> encodingBuffer;
   bool usingInternalFrameBuffer = false;
 
@@ -2298,7 +2316,7 @@ StreamCoder :: setStandardsCompliance(CodecStandardsCompliance compliance)
 }
 
 int32_t 
-StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface) 
+StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, void* surface) 
 {
   if (!(av_pix_fmt_desc_get((AVPixelFormat)type)->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
       VS_LOG_WARN("Requested type is not hardware accelerated, default decoder will be used instead %d %d", av_pix_fmt_desc_get((AVPixelFormat)type)->flags, AV_PIX_FMT_FLAG_HWACCEL);
@@ -2330,8 +2348,12 @@ StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface)
     if (type == IPixelFormat::MEDIACODEC) { 
       #ifdef __ANDROID__
       if (!mCodecContext->hwaccel_context && surface){  
-        mediacodec_alloc_context(mCodecContext, JNIHelper::sGetEnv(), static_cast<jobject>(surface));
+        jobject jSurface = static_cast<jobject>(surface);
+        if (jSurface){
+          mediacodec_alloc_context(mCodecContext, JNIHelper::sGetEnv(), jSurface);
+        }
       }
+      #elif __APPLE__
       #else
       VS_LOG_WARN("Try to use MediaCodec Android hardware type on non Android platform");
       #endif
@@ -2344,7 +2366,7 @@ StreamCoder::setHardwareDecoding(const IPixelFormat::Type type, jobject surface)
   return 0;
 }
 
-jobject 
+void* 
 StreamCoder::getHardwareSurface() 
 {
     #ifdef __ANDROID__

@@ -110,7 +110,7 @@ namespace com { namespace xuggle { namespace xuggler
     virtual int32_t encodeVideo(IPacket *pOutPacket,
         IVideoPicture * pFrame, int32_t suggestedBufferSize);
     virtual int32_t encodeAudio(IPacket *pOutPacket,
-        IAudioSamples* pSamples, uint32_t sampleToStartFrom);
+        IAudioSamples* pSamples, int32_t sampleToStartFrom);
 
     virtual int64_t getNextPredictedPts();
 
@@ -176,8 +176,8 @@ namespace com { namespace xuggle { namespace xuggler
 
     virtual CodecStandardsCompliance getStandardsCompliance();
     virtual int32_t setStandardsCompliance(CodecStandardsCompliance compliance);
-    virtual int32_t setHardwareDecoding(IPixelFormat::Type type, jobject surface=NULL);
-    virtual jobject getHardwareSurface();
+    virtual int32_t setHardwareDecoding(IPixelFormat::Type type, void* surface=NULL);
+    virtual void* getHardwareSurface();
     virtual int32_t open(IMetaData *options, IMetaData* unsetOptions);
     virtual int32_t setProperty(IMetaData* valuesToSet, IMetaData* valuesNotFound);
 

@@ -17,6 +17,7 @@
  * along with Xuggle-Xuggler-Main.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
 
+#ifdef SWIGJAVA
 %typemap (javacode) com::xuggle::xuggler::IStreamCoder,com::xuggle::xuggler::IStreamCoder*,com::xuggle::xuggler::IStreamCoder& %{
 
   /**
@@ -125,12 +126,177 @@
     }
     return retval;
   }
+ 
 
-  
 %}
 
+%extend com::xuggle::xuggler::IStreamCoder {
+
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    int32_t setHardwareDecoding(IPixelFormat::Type type){
+        return $self->setHardwareDecoding(type);
+    }
+
+#ifdef Android
+
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    int32_t setHardwareDecoding(IPixelFormat::Type type, void* surface){
+        return $self->setHardwareDecoding(type, surface);
+    }
+    
+    void* getHardwareSurface(){
+        return $self->getHardwareSurface();
+    }
+
+#endif
+
+} 
+
+%typemap(jtype)  void*, const void* &  "android.view.Surface";
+%typemap(jstype) void*, const void* &  "android.view.Surface";
+%typemap(jni) void*       "jobject"
+%typemap(javaout) void* {
+    return $jnicall;
+  }
+%typemap(javain) void*
+    "$javainput"
+
+#elif SWIGKOTLIN
+
+%extend com::xuggle::xuggler::IStreamCoder {
+
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    int32_t setHardwareDecoding(IPixelFormat::Type type){
+        return $self->setHardwareDecoding(type);
+    }
+
+//%proxycode %{
+//fun setHardwareDecoding(type: IPixelFormat.Type):Int
+//%}    
+
+#ifdef Android
+
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    int32_t setHardwareDecoding(IPixelFormat::Type type, void* surface){
+        return $self->setHardwareDecoding(type, surface);
+    }
+    
+    void* getHardwareSurface(){
+        return $self->getHardwareSurface();
+    }
+
+#endif
+
+}
+
+#ifdef Mac
+
+%typemap (expectbody) com::xuggle::xuggler::IStreamCoder,com::xuggle::xuggler::IStreamCoder*,com::xuggle::xuggler::IStreamCoder& %{ 
+  
+  internal constructor(cPtr: Long, cMemoryOwn: Boolean)
+
+  /**
+   * Try to change current decoder to an HW decoder compatible with
+   * pixel format
+   * 
+   * @param type an HW accelerated pixel format
+   * @return 0 on success; non-zero on failure
+   */
+  fun setHardwareDecoding(type: IPixelFormat.Type):Int
+
+  fun decodeVideo(pOutFrame: IVideoPicture, packet: IPacket, byteOffset: Int):Int
+%}
+
+%typemap (javabody_derived) com::xuggle::xuggler::IStreamCoder,com::xuggle::xuggler::IStreamCoder*,com::xuggle::xuggler::IStreamCoder& %{
+
+  private var swigCPtr: Long = -1
+
+  actual internal constructor(cPtr: Long, cMemoryOwn: Boolean): super($imclassname.$javaclazznameSWIGUpcast(cPtr), cMemoryOwn) {
+    swigCPtr = cPtr
+    freeze()
+  }
+
+  val mSurface: AtomicReference<platform.AVFoundation.AVSampleBufferDisplayLayer?> = AtomicReference(null)
+
+  /**
+   * Try to change current decoder to an HW decoder compatible with
+   * pixel format
+   * 
+   * @param type an HW accelerated pixel format
+   * @param surface a display layer
+   * @return 0 on success; non-zero on failure
+   */
+  fun setHardwareDecoding(type: IPixelFormat.Type,  surface: platform.AVFoundation.AVSampleBufferDisplayLayer) {
+    mSurface.compareAndSet(null, surface)
+    setHardwareDecoding(type)
+  }
+
+  actual fun decodeVideo(pOutFrame: IVideoPicture, packet: IPacket, byteOffset: Int):Int {
+    val ret = decodeVideo_internal(pOutFrame, packet, byteOffset)
+    if (ret >= 0 && pOutFrame.isComplete()){
+      pOutFrame.setDisplayLayer(mSurface.value)        
+    }
+    return ret;
+  }
+
+%}
+%javamethodmodifiers com::xuggle::xuggler::IStreamCoder::decodeVideo "internal"
+%rename(decodeVideo_internal) com::xuggle::xuggler::IStreamCoder::decodeVideo;
+%typemap(jstype)  void*, const void* & "platform.AVFoundation.AVSampleBufferDisplayLayer";
+%javamethodmodifiers com::xuggle::xuggler::IStreamCoder::getHardwareSurface() "internal"
+#else
+
+%typemap (expectbody) com::xuggle::xuggler::IStreamCoder,com::xuggle::xuggler::IStreamCoder*,com::xuggle::xuggler::IStreamCoder& %{ 
+  
+  internal constructor(cPtr: Long, cMemoryOwn: Boolean)
+
+  /**
+   * Try to change current decoder to an HW decoder compatible with
+   * pixel format
+   * 
+   * @param type an HW accelerated pixel format
+   * @return 0 on success; non-zero on failure
+   */
+  fun setHardwareDecoding(type: IPixelFormat.Type):Int
+
+%}
+
+#endif
+
+#endif
+
+#ifdef SWIGJAVA
 %typemap(javainterfaces) com::xuggle::xuggler::IStreamCoder, com::xuggle::xuggler::IStreamCoder*, com::xuggle::xuggler::IStreamCoder& "com.xuggle.xuggler.IConfigurable";
 %javamethodmodifiers com::xuggle::xuggler::IStreamCoder::open() "@Deprecated public"
 %javamethodmodifiers com::xuggle::xuggler::IStreamCoder::make(Direction) "@Deprecated public"
+#elif SWIGKOTLIN
+%javamethodmodifiers com::xuggle::xuggler::IStreamCoder::open() "@Deprecated(\"\")"
+%javamethodmodifiers com::xuggle::xuggler::IStreamCoder::make(Direction) "@Deprecated(\"\")"
+#endif
+
 %include <com/xuggle/xuggler/IStreamCoder.h>
 

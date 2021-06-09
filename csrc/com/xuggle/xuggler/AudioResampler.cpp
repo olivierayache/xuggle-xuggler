@@ -277,11 +277,11 @@ namespace com { namespace xuggle { namespace xuggler
   int
   AudioResampler :: resample(IAudioSamples * pOutSamples,
       IAudioSamples* pInSamples,
-      unsigned int numSamples)
+      int32_t numSamples)
   {
     int retval = -1;
-    AudioSamples* outSamples = dynamic_cast<AudioSamples*>(pOutSamples);
-    AudioSamples* inSamples = dynamic_cast<AudioSamples*>(pInSamples);
+    AudioSamples* outSamples = static_cast<AudioSamples*>(pOutSamples);
+    AudioSamples* inSamples = static_cast<AudioSamples*>(pInSamples);
     unsigned int sampleSize=0;
 
     try {
@@ -326,7 +326,7 @@ namespace com { namespace xuggle { namespace xuggler
       if (outSamples->ensureCapacity(neededBytes) < 0)
         throw std::runtime_error("attempted to resize output buffer but failed");
       
-      uint32_t outBufSize = outSamples->getMaxBufferSize();
+      int32_t outBufSize = outSamples->getMaxBufferSize();
       int32_t gap = (neededSamples*bytesPerOutputSample)-outBufSize;
       
       if (gap > 0) {

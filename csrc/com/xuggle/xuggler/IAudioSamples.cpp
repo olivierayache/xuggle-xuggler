@@ -34,7 +34,7 @@ namespace com { namespace xuggle { namespace xuggler
   {
   }
   
-  uint32_t
+  int32_t
   IAudioSamples :: findSampleBitDepth(Format format)
   {
     int bits = av_get_bytes_per_sample((enum AVSampleFormat) format)<<3;
@@ -42,14 +42,14 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   IAudioSamples*
-  IAudioSamples :: make(uint32_t numSamples, uint32_t numChannels)
+  IAudioSamples :: make(int32_t numSamples, int32_t numChannels)
   {
     Global::init();
     return AudioSamples::make(numSamples, numChannels);
   }
 
   IAudioSamples*
-  IAudioSamples :: make(uint32_t numSamples, uint32_t numChannels,
+  IAudioSamples :: make(int32_t numSamples, int32_t numChannels,
       IAudioSamples::Format format)
   {
     Global::init();

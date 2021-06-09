@@ -171,7 +171,11 @@ namespace com { namespace xuggle { namespace xuggler
      * {@link com.xuggle.xuggler.IStreamCoder#setHardwareDecoding(IPixelFormat.Type, Object)} 
      * must be called before opening decoder. 
      */
-    virtual void render()=0;
+    virtual void render(bool drop = false, int64_t timeStamp = -1)=0;
+    
+#ifndef SWIG
+    virtual void* getOpaqueData()=0;
+#endif
     
     /**
      * Get a new picture object.
@@ -246,7 +250,108 @@ namespace com { namespace xuggle { namespace xuggler
      * @see #getPictureType()
      */
     virtual void setPictureType(PictType type)=0;
+    
+    
+    typedef enum {
+        /**
+         * The data is the AVPanScan struct defined in libavcodec.
+         */
+        AV_FRAME_DATA_PANSCAN,
+        /**
+         * ATSC A53 Part 4 Closed Captions.
+         * A53 CC bitstream is stored as uint8_t in AVFrameSideData.data.
+         * The number of bytes of CC data is AVFrameSideData.size.
+         */
+        AV_FRAME_DATA_A53_CC,
+        /**
+         * Stereoscopic 3d metadata.
+         * The data is the AVStereo3D struct defined in libavutil/stereo3d.h.
+         */
+        AV_FRAME_DATA_STEREO3D,
+        /**
+         * The data is the AVMatrixEncoding enum defined in libavutil/channel_layout.h.
+         */
+        AV_FRAME_DATA_MATRIXENCODING,
+        /**
+         * Metadata relevant to a downmix procedure.
+         * The data is the AVDownmixInfo struct defined in libavutil/downmix_info.h.
+         */
+        AV_FRAME_DATA_DOWNMIX_INFO,
+        /**
+         * ReplayGain information in the form of the AVReplayGain struct.
+         */
+        AV_FRAME_DATA_REPLAYGAIN,
+        /**
+         * This side data contains a 3x3 transformation matrix describing an affine
+         * transformation that needs to be applied to the frame for correct
+         * presentation.
+         *
+         * See libavutil/display.h for a detailed description of the data.
+         */
+        AV_FRAME_DATA_DISPLAYMATRIX,
+        /**
+         * Active Format Description data consisting of a single byte as specified
+         * in ETSI TS 101 154 using AVActiveFormatDescription enum.
+         */
+        AV_FRAME_DATA_AFD,
+        /**
+         * Motion vectors exported by some codecs (on demand through the export_mvs
+         * flag set in the libavcodec AVCodecContext flags2 option).
+         * The data is the AVMotionVector struct defined in
+         * libavutil/motion_vector.h.
+         */
+        AV_FRAME_DATA_MOTION_VECTORS,
+        /**
+         * Recommmends skipping the specified number of samples. This is exported
+         * only if the "skip_manual" AVOption is set in libavcodec.
+         * This has the same format as AV_PKT_DATA_SKIP_SAMPLES.
+         * @code
+         * u32le number of samples to skip from start of this packet
+         * u32le number of samples to skip from end of this packet
+         * u8    reason for start skip
+         * u8    reason for end   skip (0=padding silence, 1=convergence)
+         * @endcode
+         */
+        AV_FRAME_DATA_SKIP_SAMPLES,
+        /**
+         * This side data must be associated with an audio frame and corresponds to
+         * enum AVAudioServiceType defined in avcodec.h.
+         */
+        AV_FRAME_DATA_AUDIO_SERVICE_TYPE,
+        /**
+         * Mastering display metadata associated with a video frame. The payload is
+         * an AVMasteringDisplayMetadata type and contains information about the
+         * mastering display color volume.
+         */
+        AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
+        /**
+         * The GOP timecode in 25 bit timecode format. Data format is 64-bit integer.
+         * This is set on the first frame of a GOP that has a temporal reference of 0.
+         */
+        AV_FRAME_DATA_GOP_TIMECODE,
 
+        /**
+         * The data represents the AVSphericalMapping structure defined in
+         * libavutil/spherical.h.
+         */
+        AV_FRAME_DATA_SPHERICAL,
+
+        /**
+         * Content light level (based on CTA-861.3). This payload contains data in
+         * the form of the AVContentLightMetadata struct.
+         */
+        AV_FRAME_DATA_CONTENT_LIGHT_LEVEL,
+
+        /**
+         * The data contains an ICC profile as an opaque octet buffer following the
+         * format described by ISO 15076-1 with an optional name defined in the
+         * metadata key entry "name".
+         */
+        AV_FRAME_DATA_ICC_PROFILE,
+    } FrameDataType;
+
+    virtual void setSideData(FrameDataType type, com::xuggle::ferry::IBuffer* buffer) = 0;
+    
     /*
      * Added for 3.1
      */

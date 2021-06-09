@@ -39,8 +39,8 @@ namespace com { namespace xuggle { namespace xuggler
   {
     VS_JNIUTILS_REFCOUNTED_OBJECT(Container)
   public:
-    virtual int32_t setInputBufferLength(uint32_t size);
-    virtual uint32_t getInputBufferLength();
+    virtual int32_t setInputBufferLength(int32_t size);
+    virtual int32_t getInputBufferLength();
     virtual bool isOpened();
     virtual bool isHeaderWritten();
 
@@ -57,7 +57,7 @@ namespace com { namespace xuggle { namespace xuggler
     virtual int32_t close(bool);
     virtual int32_t getNumStreams();
 
-    virtual Stream* getStream(uint32_t position);
+    virtual Stream* getStream(int32_t position);
 
     virtual Stream* addNewStream(int32_t id);
 

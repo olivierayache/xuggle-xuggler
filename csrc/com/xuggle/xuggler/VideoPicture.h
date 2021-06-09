@@ -60,7 +60,8 @@ namespace com { namespace xuggle { namespace xuggler
         int width, int height, int64_t pts);
     virtual bool copy(IVideoPicture* srcFrame);
     virtual void setData(com::xuggle::ferry::IBuffer* buffer);
-    virtual void render();
+    virtual void render(bool drop, int64_t timeStamp);
+    virtual void* getOpaqueData();
 
     // Not for calling from Java
     /**
@@ -114,6 +115,8 @@ namespace com { namespace xuggle { namespace xuggler
     virtual IVideoPicture::PictType getPictureType();
     virtual void setPictureType(IVideoPicture::PictType type);
     
+    virtual void setSideData(IVideoPicture::FrameDataType type, com::xuggle::ferry::IBuffer* buffer);
+
     static VideoPicture* make(com::xuggle::ferry::IBuffer* buffer,
         IPixelFormat::Type format, int width, int height);
 
@@ -128,6 +131,10 @@ namespace com { namespace xuggle { namespace xuggler
     // about a decoded frame.
     AVFrame * mFrame;
     bool mIsComplete;
+    
+#ifdef __APPLE__
+    CMSampleBufferRef mCMSampleBuffer;
+#endif
 
     com::xuggle::ferry::RefPointer<com::xuggle::ferry::IBuffer> mBuffer;
     com::xuggle::ferry::RefPointer<IRational> mTimeBase;

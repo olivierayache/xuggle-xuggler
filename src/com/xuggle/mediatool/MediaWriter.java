@@ -901,7 +901,7 @@ implements IMediaWriter
 
       // establish the number of samples
 
-      long sampleCount = samples.length / coder.getChannels();
+      int sampleCount = samples.length / coder.getChannels();
 
       // create the audio samples object and extract the internal buffer
       // as an array

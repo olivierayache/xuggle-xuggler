@@ -17,6 +17,8 @@
  * along with Xuggle-Xuggler-Main.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
 
+#ifdef SWIGJAVA
+
 %typemap (javacode) com::xuggle::xuggler::IAudioSamples,com::xuggle::xuggler::IAudioSamples*,com::xuggle::xuggler::IAudioSamples& %{
 
   /**
@@ -46,5 +48,38 @@
   }
 
 %}
+
+#elif SWIGKOTLIN
+
+%extend com::xuggle::xuggler::IAudioSamples {
+
+    /*
+     * Convenience method that returns the native buffer
+     * managed by getData() above.
+     *
+     * @param startingSample The sample to start the array at.
+     *   That means that only getNumSamples()-startingSample
+     *   samples are available in this AudioSamples collection.
+     */
+    virtual short *getRawSamples(uint32_t startingSample) {
+        return $self->getRawSamples(startingSample);
+    }
+}
+
+%typemap(jstype)  short* "CPointer<ShortVar>?";
+%typemap(jni)  short* "short*";
+%typemap(jtype)  short* "short*";
+%typemap(javaout) short* {
+    return $jnicall;
+  }
+%typemap(out) short*
+%{ $result = $1; %}
+
+
+%typemap (javacode) com::xuggle::xuggler::IAudioSamples,com::xuggle::xuggler::IAudioSamples*,com::xuggle::xuggler::IAudioSamples& %{
+
+%}
+
+#endif
 
 %include <com/xuggle/xuggler/IAudioSamples.h>

@@ -37,7 +37,7 @@ namespace com {
                     return retval;
                 }
                 if (samples) {
-                    AudioSamples* inSamples = dynamic_cast<AudioSamples*> (samples);
+                    AudioSamples* inSamples = static_cast<AudioSamples*> (samples);
                     AVFrame* frame = av_frame_alloc();
                     if (frame) {
                         frame->nb_samples = inSamples->getNumSamples();
@@ -86,7 +86,7 @@ namespace com {
                 if (picture) {
 		    AVFrame* frame = av_frame_alloc();
 		    if (frame) {
-                    	VideoPicture* inPicture = dynamic_cast<VideoPicture*> (picture);
+                    	VideoPicture* inPicture = static_cast<VideoPicture*> (picture);
                     	IRational* timeBase = inPicture->getTimeBase();
                     	int64_t pts = mTimeBase->rescale(inPicture->getPts(), timeBase);
                     	VS_REF_RELEASE(timeBase);

@@ -90,7 +90,7 @@ namespace com { namespace xuggle { namespace xuggler
      * 
      * @return Number of bits in a raw sample (per channel)
      */
-    virtual uint32_t getSampleBitDepth()=0;
+    virtual int32_t getSampleBitDepth()=0;
 
     /**
      * Find the Format of the samples in this buffer.  Right now
@@ -113,7 +113,7 @@ namespace com { namespace xuggle { namespace xuggler
      * 
      * @return The number of samples.
      */
-    virtual uint32_t getNumSamples()=0;
+    virtual int32_t getNumSamples()=0;
 
     /**
      * @return Maximum number of bytes that can be put in
@@ -121,18 +121,18 @@ namespace com { namespace xuggle { namespace xuggler
      * put in this IAudioSamples instance, do the following
      *   num_samples = getMaxBufferSize() / (getSampleSize())
      */
-    virtual uint32_t getMaxBufferSize()=0;
+    virtual int32_t getMaxBufferSize()=0;
 
     /**
      * @return Maximum number of samples this buffer can hold.
      */
-    virtual uint32_t getMaxSamples()=0;
+    virtual int32_t getMaxSamples()=0;
 
     /**
      * @return Number of bytes in a single sample of audio (including channels).
      *    You can also get this by getSampleBitDepth()*getChannels()/8.
      */
-    virtual uint32_t getSampleSize()=0;
+    virtual int32_t getSampleSize()=0;
 
     /**
      * What is the Presentation Time Stamp of this set of audio samples.
@@ -169,10 +169,22 @@ namespace com { namespace xuggle { namespace xuggler
      * @param pts The presentation time stamp of the starting sample in this buffer.
      *   Caller must ensure pts is in units of 1/1,000,000 of a second
      */
-    virtual void setComplete(bool complete, uint32_t numSamples,
+    virtual void setComplete(bool complete, int32_t numSamples,
         int32_t sampleRate, int32_t channels, Format format,
         int64_t pts)=0;
 
+#ifndef SWIG
+    /*
+     * Convenience method that from C++ returns the buffer
+     * managed by getData() above.
+     *
+     * @param startingSample The sample to start the array at.
+     *   That means that only getNumSamples()-startingSample
+     *   samples are available in this AudioSamples collection.
+     */
+    virtual short *getRawSamples(uint32_t startingSample) = 0;
+#endif
+    
     /**
      * Sets the sample at the given index and channel to the sample.  In
      * theory we assume input is the given Format, and will convert
@@ -187,7 +199,7 @@ namespace com { namespace xuggle { namespace xuggler
      *
      * @return >= 0 on success; -1 on error.
      */
-    virtual int32_t setSample(uint32_t sampleIndex, int32_t channel, Format format, int32_t sample)=0;
+    virtual int32_t setSample(int32_t sampleIndex, int32_t channel, Format format, int32_t sample)=0;
 
     /**
      * Get the sample at the given sampleIndex and channel, and return it in
@@ -199,11 +211,11 @@ namespace com { namespace xuggle { namespace xuggler
      *
      * @return The sample if available.  If that sample is not available
      *   (e.g. because the channel doesn't exist, or the samples have not
-     *   been #setComplete(bool, uint32_t, int32_t, int32_t, Format, int64_t)),
+     *   been #setComplete(bool, int32_t, int32_t, int32_t, Format, int64_t)),
      *   then this method returns 0.  It is up to the caller to ensure
      *   the inputs are valid given that 0 is also a valid sample value.
      */
-    virtual int32_t getSample(uint32_t sampleIndex, int32_t channel, Format format)=0;
+    virtual int32_t getSample(int32_t sampleIndex, int32_t channel, Format format)=0;
 
     /**
      * A convenience method that returns the # of bits in a given
@@ -215,7 +227,7 @@ namespace com { namespace xuggle { namespace xuggler
      *
      * @return The number of bits (not bytes) in the passed in format.
      */
-    static uint32_t findSampleBitDepth(Format format);
+    static int32_t findSampleBitDepth(Format format);
     
     /**
      * Get a new audio samples buffer.
@@ -231,8 +243,8 @@ namespace com { namespace xuggle { namespace xuggler
      *   want to put in this buffer.
      * @return A new object, or null if we can't allocate one.
      */
-    static IAudioSamples* make(uint32_t numSamples,
-        uint32_t numChannels);
+    static IAudioSamples* make(int32_t numSamples,
+        int32_t numChannels);
     
 
     /**
@@ -333,7 +345,7 @@ CH_LAYOUT_STEREO_DOWNMIX=    (CH_STEREO_LEFT|CH_STEREO_RIGHT),
     
     virtual ChannelLayout getChannelLayout() = 0;
     
-    virtual void setComplete(bool complete, uint32_t numSamples,
+    virtual void setComplete(bool complete, int32_t numSamples,
         int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, Format format,
         int64_t pts)=0;
     
@@ -379,8 +391,8 @@ CH_LAYOUT_STEREO_DOWNMIX=    (CH_STEREO_LEFT|CH_STEREO_RIGHT),
      * @param format The format of this buffer
      * @return A new object, or null if we can't allocate one.
      */
-    static IAudioSamples* make(uint32_t numSamples,
-        uint32_t numChannels,
+    static IAudioSamples* make(int32_t numSamples,
+        int32_t numChannels,
         IAudioSamples::Format format);
     
   };

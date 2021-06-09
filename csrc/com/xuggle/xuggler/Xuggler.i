@@ -183,7 +183,7 @@ import com.xuggle.ferry.*;
 #elif SWIGKOTLIN
 %include <com/xuggle/xuggler/IMetaData.h>
 %include <com/xuggle/xuggler/IMediaData.h>
-%include <com/xuggle/xuggler/IAudioSamples.h>
+%include <com/xuggle/xuggler/IAudioSamples.swg>
 %include <com/xuggle/xuggler/IMediaFilter.h>
 %include <com/xuggle/xuggler/IBufferSource.h>
 %include <com/xuggle/xuggler/IBufferSink.h>
@@ -192,9 +192,9 @@ import com.xuggle.ferry.*;
 %include <com/xuggle/xuggler/IPacket.h>
 %include <com/xuggle/xuggler/IIndexEntry.h>
 %include <com/xuggle/xuggler/IAudioResampler.h>
-%include <com/xuggle/xuggler/IVideoPicture.h>
+%include <com/xuggle/xuggler/IVideoPicture.swg>
 %include <com/xuggle/xuggler/IVideoResampler.h>
-%include <com/xuggle/xuggler/IStreamCoder.h>
+%include <com/xuggle/xuggler/IStreamCoder.swg>
 %include <com/xuggle/xuggler/IStream.h>
 %include <com/xuggle/xuggler/IContainerFormat.h>
 %include <com/xuggle/xuggler/IContainer.h>

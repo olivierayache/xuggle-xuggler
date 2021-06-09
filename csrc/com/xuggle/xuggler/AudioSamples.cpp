@@ -121,15 +121,15 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   AudioSamples*
-  AudioSamples :: make(uint32_t numSamples,
-      uint32_t numChannels)
+  AudioSamples :: make(int32_t numSamples,
+      int32_t numChannels)
   {
     return make(numSamples, numChannels, IAudioSamples::FMT_S16);
   }
   
   AudioSamples*
-  AudioSamples :: make(uint32_t numSamples,
-      uint32_t numChannels,
+  AudioSamples :: make(int32_t numSamples,
+      int32_t numChannels,
       IAudioSamples::Format format)
   {
     AudioSamples *retval=0;
@@ -149,7 +149,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
   
   AudioSamples*
-  AudioSamples :: make(IBuffer* buffer, int channels,
+  AudioSamples :: make(IBuffer* buffer, int32_t channels,
       IAudioSamples::Format format)
   {
     if (!buffer)
@@ -224,29 +224,29 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   
-  uint32_t
+  int32_t
   AudioSamples :: getNumSamples()
   {
     return mNumSamples;
   }
 
-  uint32_t
+  int32_t
   AudioSamples :: getMaxBufferSize()
   {
     allocInternalSamples();
     return mSamples->getBufferSize()-VS_AUDIOSAMPLES_BUFFER_PADDING;
   }
 
-  uint32_t
+  int32_t
   AudioSamples :: getSampleBitDepth()
   {
     return IAudioSamples::findSampleBitDepth(mSampleFmt);
   }
 
-  uint32_t
+  int32_t
   AudioSamples :: getSampleSize()
   {
-    uint32_t bits = getSampleBitDepth();
+    int32_t bits = getSampleBitDepth();
     if (bits < 8)
       bits = 8;
 
@@ -263,14 +263,14 @@ namespace com { namespace xuggle { namespace xuggler
     return retval;
   }
 
-  uint32_t
+  int32_t
   AudioSamples :: getMaxSamples()
   {
     return getMaxBufferSize() / getSampleSize();
   }
 
   void
-  AudioSamples :: setComplete(bool complete, uint32_t numSamples,
+  AudioSamples :: setComplete(bool complete, int32_t numSamples,
       int32_t sampleRate, int32_t channels, Format format,
       int64_t pts)
   {
@@ -293,7 +293,7 @@ namespace com { namespace xuggle { namespace xuggler
 #if 0
       {
         short* samps = this->getRawSamples(0);
-        for(uint32_t i = 0; i < mNumSamples;i++)
+        for(int32_t i = 0; i < mNumSamples;i++)
         {
           int32_t samp = samps[i];
           VS_LOG_DEBUG("i: %d; samp: %d", i, samp);
@@ -307,7 +307,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
   
   void 
-  AudioSamples::setComplete(bool complete, uint32_t numSamples, int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, Format format, int64_t pts) 
+  AudioSamples::setComplete(bool complete, int32_t numSamples, int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, Format format, int64_t pts) 
   {          
       setComplete(complete, numSamples, sampleRate, channels, format, pts);
       mChannelLayout = channelLayout;
@@ -336,7 +336,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   int32_t
-  AudioSamples :: setSample(uint32_t sampleIndex, int32_t channel, Format format, int32_t sample)
+  AudioSamples :: setSample(int32_t sampleIndex, int32_t channel, Format format, int32_t sample)
   {
     int32_t retval = -1;
     try {
@@ -363,7 +363,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   int32_t
-  AudioSamples :: getSample(uint32_t sampleIndex, int32_t channel, Format format)
+  AudioSamples :: getSample(int32_t sampleIndex, int32_t channel, Format format)
   {
     int32_t retval = 0;
     try

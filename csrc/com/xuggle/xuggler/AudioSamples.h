@@ -49,24 +49,24 @@ namespace com { namespace xuggle { namespace xuggler
     virtual IAudioSamples::ChannelLayout getChannelLayout();
 
     virtual Format getFormat();
-    virtual uint32_t getSampleBitDepth();
+    virtual int32_t getSampleBitDepth();
 
-    virtual uint32_t getNumSamples();
-    virtual uint32_t getMaxBufferSize();
-    virtual uint32_t getSampleSize();
-    virtual uint32_t getMaxSamples();
+    virtual int32_t getNumSamples();
+    virtual int32_t getMaxBufferSize();
+    virtual int32_t getSampleSize();
+    virtual int32_t getMaxSamples();
     virtual com::xuggle::ferry::IBuffer* getData();
     virtual int64_t getPts();
     virtual void setPts(int64_t aValue);
     virtual int64_t getNextPts();
-    virtual int32_t setSample(uint32_t sampleIndex, int32_t channel, Format format, int32_t sample);
-    virtual int32_t getSample(uint32_t sampleIndex, int32_t channel, Format format);
+    virtual int32_t setSample(int32_t sampleIndex, int32_t channel, Format format, int32_t sample);
+    virtual int32_t getSample(int32_t sampleIndex, int32_t channel, Format format);
     virtual void setData(com::xuggle::ferry::IBuffer* buffer);
-    virtual void setComplete(bool complete, uint32_t numSamples,
+    virtual void setComplete(bool complete, int32_t numSamples,
         int32_t sampleRate, int32_t channels, Format sampleFmt,
         int64_t pts);
 
-    virtual void setComplete(bool complete, uint32_t numSamples, 
+    virtual void setComplete(bool complete, int32_t numSamples, 
         int32_t sampleRate, int32_t channels, ChannelLayout channelLayout, 
         Format format, int64_t pts);
 
@@ -90,12 +90,12 @@ namespace com { namespace xuggle { namespace xuggler
     /*
      * This creates an audio sample.
      */
-    static AudioSamples* make(uint32_t numSamples,
-        uint32_t numChannels);
-    static AudioSamples* make(uint32_t numSamples,
-        uint32_t numChannels, IAudioSamples::Format);
+    static AudioSamples* make(int32_t numSamples,
+        int32_t numChannels);
+    static AudioSamples* make(int32_t numSamples,
+        int32_t numChannels, IAudioSamples::Format);
     
-    static AudioSamples* make(com::xuggle::ferry::IBuffer* buffer, int channels,
+    static AudioSamples* make(com::xuggle::ferry::IBuffer* buffer, int32_t channels,
         IAudioSamples::Format format);
   protected:
     AudioSamples();
@@ -106,8 +106,8 @@ namespace com { namespace xuggle { namespace xuggler
         com::xuggle::ferry::IBuffer * buffer);
     com::xuggle::ferry::RefPointer<com::xuggle::ferry::IBuffer> mSamples;
     com::xuggle::ferry::RefPointer<IRational> mTimeBase;
-    uint32_t mNumSamples;
-    uint32_t mRequestedSamples;
+    int32_t mNumSamples;
+    int32_t mRequestedSamples;
     int32_t mSampleRate;
     int32_t mChannels;
     ChannelLayout mChannelLayout;

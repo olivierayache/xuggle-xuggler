@@ -73,7 +73,7 @@ namespace com {
                     return -1;
                 }
                 if (samples) {
-                    AudioSamples* outSamples = dynamic_cast<AudioSamples*> (samples);
+                    AudioSamples* outSamples = static_cast<AudioSamples*> (samples);
                     if (outSamples) {
                         outSamples->setComplete(false, 0, outSamples->getSampleRate(), outSamples->getChannels(), outSamples->getChannelLayout(),
                                 IAudioSamples::FMT_S16, 0);
@@ -110,7 +110,7 @@ namespace com {
                     return -1;
                 }
                 if (picture) {
-                    VideoPicture* outPicture = dynamic_cast<VideoPicture*> (picture);
+                    VideoPicture* outPicture = static_cast<VideoPicture*> (picture);
 
                     if (picture) {
                         outPicture->setComplete(false, IPixelFormat::NONE, outPicture->getWidth(), outPicture->getHeight(), 0);

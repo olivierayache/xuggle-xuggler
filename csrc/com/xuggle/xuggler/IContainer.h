@@ -116,7 +116,7 @@ namespace com { namespace xuggle { namespace xuggler
      * @param size The suggested buffer size.
      * @return size on success; <0 on error.
      */
-    virtual int32_t setInputBufferLength(uint32_t size)=0;
+    virtual int32_t setInputBufferLength(int32_t size)=0;
 
     /**
      * Return the input buffer length.
@@ -125,7 +125,7 @@ namespace com { namespace xuggle { namespace xuggler
      *   0 means FFMPEG should choose it's own
      *   size (and it'll probably be 32768).
      */
-    virtual uint32_t getInputBufferLength()=0;
+    virtual int32_t getInputBufferLength()=0;
 
     /**
      * Is this container opened?
@@ -279,7 +279,7 @@ namespace com { namespace xuggle { namespace xuggler
      * @param streamIndex the index of this stream in the container
      * @return The stream at that position in the container, or null if none there.
      */
-    virtual IStream* getStream(uint32_t streamIndex)=0;
+    virtual IStream* getStream(int32_t streamIndex)=0;
 
     /**
      * @deprecated Use {@link #addNewStream(ICodec.ID)} instead.

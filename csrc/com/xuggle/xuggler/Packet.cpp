@@ -55,6 +55,8 @@ namespace com { namespace xuggle { namespace xuggler
       av_free(mPacket);
     }
     mPacket = 0;
+    mBuffer = 0;
+    mTimeBase = 0;
   }
 
   int64_t

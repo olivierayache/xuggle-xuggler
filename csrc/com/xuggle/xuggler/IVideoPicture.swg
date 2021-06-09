@@ -17,6 +17,7 @@
  * along with Xuggle-Xuggler-Main.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
 
+#ifdef SWIGJAVA
 %typemap (javacode) com::xuggle::xuggler::IVideoPicture,com::xuggle::xuggler::IVideoPicture*,com::xuggle::xuggler::IVideoPicture& %{
 
   /**
@@ -45,5 +46,69 @@
   }
 
 %}
+
+#elif SWIGKOTLIN
+
+%extend com::xuggle::xuggler::IVideoPicture {
+
+#ifdef Mac
+    /**
+     * Try to change current decoder to an HW decoder compatible with
+     * pixel format
+     * 
+     * @param type an HW accelerated pixel format
+     * @return 0 on success; non-zero on failure
+     */
+    CMSampleBufferRef getCMSampleBuffer(){
+        return (CMSampleBufferRef)$self->getOpaqueData();
+    }
+#endif
+}
+
+#ifdef Mac
+
+%typemap (expectbody) com::xuggle::xuggler::IVideoPicture,com::xuggle::xuggler::IVideoPicture*,com::xuggle::xuggler::IVideoPicture& %{
+
+  internal constructor(cPtr: Long, cMemoryOwn: Boolean)
+
+  public fun render(drop: Boolean, timestamp: Long)
+
+%}
+%typemap (javabody_derived) com::xuggle::xuggler::IVideoPicture,com::xuggle::xuggler::IVideoPicture*,com::xuggle::xuggler::IVideoPicture& %{
+
+  private var swigCPtr: Long = -1
+
+  actual internal constructor(cPtr: Long, cMemoryOwn: Boolean): super($imclassname.$javaclazznameSWIGUpcast(cPtr), cMemoryOwn) {
+    swigCPtr = cPtr
+    freeze()
+  }
+
+  val mLayer: AtomicReference<platform.AVFoundation.AVSampleBufferDisplayLayer?> = AtomicReference(null)
+
+  internal fun setDisplayLayer(layer: platform.AVFoundation.AVSampleBufferDisplayLayer?) {
+    mLayer.compareAndSet(null, layer)
+  }
+
+  actual fun render(drop: Boolean, timestamp: Long) {
+    render_internal(drop, timestamp)
+    mLayer.value?.enqueueSampleBuffer(getCMSampleBuffer())
+  }
+
+%}
+
+%javamethodmodifiers com::xuggle::xuggler::IVideoPicture::render(bool, int64_t) "internal"
+%rename(render_internal) com::xuggle::xuggler::IVideoPicture::render(bool, int64_t);
+%typemap(jstype)  CMSampleBufferRef, const CMSampleBufferRef & "platform.CoreMedia.CMSampleBufferRef";
+%typemap(jni)  CMSampleBufferRef, const CMSampleBufferRef & "CMSampleBufferRef";
+%typemap(jtype)  CMSampleBufferRef, const CMSampleBufferRef & "CMSampleBufferRef";
+%typemap(javaout) CMSampleBufferRef {
+    return $jnicall;
+  }
+%typemap(out) CMSampleBufferRef
+%{ $result = $1; %}
+
+#endif
+
+#endif
 
 %include <com/xuggle/xuggler/IVideoPicture.h>

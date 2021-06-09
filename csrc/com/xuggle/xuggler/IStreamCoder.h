@@ -558,7 +558,7 @@ namespace com { namespace xuggle { namespace xuggler
      * @return number of samples we consumed when encoding, or negative for errors.
      */
     virtual int32_t encodeAudio(IPacket * pOutPacket,
-        IAudioSamples* pSamples, uint32_t sampleToStartFrom)=0;
+        IAudioSamples* pSamples, int32_t sampleToStartFrom)=0;
 
     /**
      * @deprecated Use {@link #make(Direction, ICodec)} instead.
@@ -1001,7 +1001,7 @@ namespace com { namespace xuggle { namespace xuggler
      */
     virtual int32_t setStandardsCompliance(CodecStandardsCompliance compliance)=0;
 
-//    #ifndef SWIG
+#ifndef SWIG
     /**
      * Try to change current decoder to an HW decoder compatible with
      * pixel format
@@ -1009,11 +1009,12 @@ namespace com { namespace xuggle { namespace xuggler
      * @param type an HW accelerated pixel format
      * @return 0 on success; non-zero on failure
      */
-    virtual int32_t setHardwareDecoding(IPixelFormat::Type type, jobject surface=NULL)=0;
+    virtual int32_t setHardwareDecoding(IPixelFormat::Type type, void* surface=NULL)=0;
     
-    virtual jobject getHardwareSurface()=0;
+    virtual void* getHardwareSurface()=0;
 
-//    #endif    
+#endif
+    
     /**
      * Open the codec with the given options.
      *

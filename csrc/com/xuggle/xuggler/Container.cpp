@@ -172,7 +172,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   int32_t
-  Container :: setInputBufferLength(uint32_t size)
+  Container :: setInputBufferLength(int32_t size)
   {
     int32_t retval = -1;
     if (mIsOpened)
@@ -187,7 +187,7 @@ namespace com { namespace xuggle { namespace xuggler
     return retval;
   }
 
-  uint32_t
+  int32_t
   Container :: getInputBufferLength()
   {
     return mInputBufferLength;
@@ -279,7 +279,7 @@ namespace com { namespace xuggle { namespace xuggler
     }
     // set up our options
     if (aOptions) {
-      MetaData* options = dynamic_cast<MetaData*>(aOptions);
+      MetaData* options = static_cast<MetaData*>(aOptions);
       if (!options)
         throw std::runtime_error("um, this shouldn't ever happen");
       // make a copy of the data returned
@@ -304,7 +304,7 @@ namespace com { namespace xuggle { namespace xuggler
     }
     XUGGLER_CHECK_INTERRUPT(retval);
     if (aUnsetOptions) {
-      MetaData* unsetOptions = dynamic_cast<MetaData*>(aUnsetOptions);
+      MetaData* unsetOptions = static_cast<MetaData*>(aUnsetOptions);
       if (!unsetOptions)
         throw std::runtime_error("a little part of me just died inside");
       unsetOptions->copy(tmp);
@@ -640,7 +640,7 @@ namespace com { namespace xuggle { namespace xuggler
   }
 
   Stream *
-  Container :: getStream(uint32_t position)
+  Container :: getStream(int32_t position)
   {
     Stream *retval = 0;
     if (mFormatContext)
@@ -661,7 +661,7 @@ namespace com { namespace xuggle { namespace xuggler
   Container :: readNextPacket(IPacket * ipkt)
   {
     int32_t retval = -1;
-    Packet* pkt = dynamic_cast<Packet*>(ipkt);
+    Packet* pkt = static_cast<Packet*>(ipkt);
     if (mFormatContext && pkt)
     {
     
@@ -738,7 +738,7 @@ namespace com { namespace xuggle { namespace xuggler
   Container :: writePacket(IPacket *ipkt, bool forceInterleave)
   {
     int32_t retval = -1;
-    Packet *pkt = dynamic_cast<Packet*>(ipkt);
+    Packet *pkt = static_cast<Packet*>(ipkt);
     try
     {
       if (this->getType() != WRITE)
@@ -1261,7 +1261,7 @@ namespace com { namespace xuggle { namespace xuggler
   Container :: setFormat(IContainerFormat* aFormat)
   {
     int32_t retval = -1;
-    ContainerFormat* format = dynamic_cast<ContainerFormat*>(aFormat);
+    ContainerFormat* format = static_cast<ContainerFormat*>(aFormat);
     try {
       if (!format)
         throw std::runtime_error("no format set");
@@ -1323,7 +1323,7 @@ namespace com { namespace xuggle { namespace xuggler
   void
   Container :: setMetaData(IMetaData * copy)
   {
-    MetaData* data = dynamic_cast<MetaData*>(getMetaData());
+    MetaData* data = static_cast<MetaData*>(getMetaData());
     if (data) {
       data->copy(copy);
       // release for the get above
@@ -1430,7 +1430,7 @@ namespace com { namespace xuggle { namespace xuggler
   Stream*
   Container:: addNewStream(ICodec* aCodec)
   {
-    Codec* codec = dynamic_cast<Codec*>(aCodec);
+    Codec* codec = static_cast<Codec*>(aCodec);
     Stream *retval=0;
     try
     {
@@ -1481,7 +1481,7 @@ namespace com { namespace xuggle { namespace xuggler
   Container :: addNewStream(IStreamCoder* aCoder)
   {
     Stream *retval=0;
-    StreamCoder * coder = dynamic_cast<StreamCoder*>(aCoder);
+    StreamCoder * coder = static_cast<StreamCoder*>(aCoder);
     RefPointer<ICodec> codec;
     try
     {
